@@ -3,14 +3,15 @@ package app
 import (
 	"context"
 	"flag"
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"github.com/solunara/isb/src/types/config"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"time"
 )
 
 var configFile *string
@@ -22,17 +23,30 @@ func init() {
 }
 
 func initConfig() error {
+	// first config is command parameter
 	if configFile != nil && *configFile != "" {
-		if cfg, err := config.Parse(*configFile); err == nil {
-			viper.Set("http.port", cfg.Http.Port)
+		viper.AddConfigPath(*configFile)
+		if err := viper.ReadInConfig(); err == nil {
 			return nil
 		}
 	}
+
+	// second config is local file
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("./config")
-	return viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err == nil {
+		return nil
+	}
+
+	// third config is remote etcd
+	err := viper.AddRemoteProvider("etcd3", "http://127.0.0.1:12379", "/isb")
+	if err != nil {
+		return err
+	}
+	viper.SetConfigType("yaml")
+	return viper.ReadRemoteConfig()
 }
 
 func initDB() (*gorm.DB, error) {

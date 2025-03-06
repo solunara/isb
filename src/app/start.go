@@ -50,13 +50,13 @@ func StartDefault() {
 	server := gin.Default()
 	server.Use(cors.Default())
 	server.GET("/", func(ctx *gin.Context) {
-		ctx.String(200, "get request")
+		ctx.String(200, "default response: get request")
 	})
 	server.POST("/", func(ctx *gin.Context) {
-		ctx.String(200, "post request")
+		ctx.String(200, "default response: post request")
 	})
 	server.PUT("/", func(ctx *gin.Context) {
-		ctx.String(200, "put request")
+		ctx.String(200, "default response: put request")
 	})
 	if err := server.Run(":8080"); err != nil {
 		log.Fatal(err)
