@@ -98,7 +98,7 @@ func initGinServer() *gin.Engine {
 		}),
 
 		func(ctx *gin.Context) {
-			println("add midddleware")
+			println("add middleware")
 		},
 	)
 	return ginsrv
