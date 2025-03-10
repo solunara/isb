@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/solunara/isb/src/app"
+	"github.com/solunara/isb/src/server"
 )
 
 func main() {
-	app.Start()
+	server.Start()
 }
