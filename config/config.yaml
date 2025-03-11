@@ -4,7 +4,7 @@ http:
   read_timeout: 30 # Second unit
 
 mysql:
-  dsn: "root:root@tcp(localhost:13316)/isb"
+  dsn: "root:root@tcp(192.168.110.247:13316)/isb?charset=utf8mb4&parseTime=true"
   slow_log: slow.log
   slow_time: 300 # Millisecond unit
   max_idle_conn: 16
@@ -13,7 +13,7 @@ mysql:
 postgres:
 
 redis:
-  addr: "localhost:6379"
+  addr: "192.168.110.247:6379"
   password: ""
   db: 0
 

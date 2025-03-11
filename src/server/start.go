@@ -16,31 +16,22 @@ func Start() {
 		StartDefault()
 	}
 
-	dbCli, err := initDB()
+	dbCli, err := initDB(initLogger())
 	if err != nil {
 		log.Printf("[Err] init db client: %v", err)
 		return
 	}
-	_ = dbCli
 
 	redisCli, err := initRedis()
 	if err != nil {
 		log.Printf("[Err] init redis client: %v", err)
 		return
 	}
-	_ = redisCli
 
-	ginServer := initGinServer()
+	ginServer := initGinServer(initMiddlewares(redisCli, initLogger()))
 
-	ginServer.GET("/", func(ctx *gin.Context) {
-		ctx.String(200, "get request")
-	})
-	ginServer.POST("/", func(ctx *gin.Context) {
-		ctx.String(200, "post request")
-	})
-	ginServer.PUT("/", func(ctx *gin.Context) {
-		ctx.String(200, "put request")
-	})
+	initRouters(ginServer, dbCli, redisCli)
+
 	if err := ginServer.Run(fmt.Sprintf(":%v", viper.GetInt("http.port"))); err != nil {
 		log.Fatal(err)
 	}

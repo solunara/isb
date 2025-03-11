@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"github.com/solunara/isb/src/model"
+	"github.com/solunara/isb/src/types/app"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -36,7 +37,7 @@ func (dao *GORMUserDAO) Insert(ctx context.Context, u model.User) error {
 		const duplicateErr uint16 = 1062
 		if me.Number == duplicateErr {
 			// 用户冲突，邮箱冲突
-			return ErrDuplicateEmail
+			return app.ErrDuplicateEmail
 		}
 	}
 	return err

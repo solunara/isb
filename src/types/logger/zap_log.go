@@ -15,7 +15,7 @@ func NewZapLogger(l *zap.Logger) *ZapLogger {
 	}
 }
 
-func NewZapLoggerV1(l *zap.Logger) (*ZapLogger, error) {
+func NewZapLoggerV1() (*ZapLogger, error) {
 	cfg := zap.NewDevelopmentConfig()
 	err := viper.UnmarshalKey("log", &cfg)
 	if err != nil {

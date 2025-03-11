@@ -3,6 +3,15 @@ package server
 import (
 	"context"
 	"flag"
+	"fmt"
+	"github.com/solunara/isb/src/repository"
+	"github.com/solunara/isb/src/repository/cache"
+	"github.com/solunara/isb/src/repository/dao"
+	"github.com/solunara/isb/src/service"
+	"github.com/solunara/isb/src/types/logger"
+	"github.com/solunara/isb/src/web"
+	"github.com/solunara/isb/src/web/middleware"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -12,6 +21,8 @@ import (
 	_ "github.com/spf13/viper/remote"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	gormLogger "gorm.io/gorm/logger"
 )
 
 var configFile *string
@@ -49,8 +60,37 @@ func initConfig() error {
 	return viper.ReadRemoteConfig()
 }
 
-func initDB() (*gorm.DB, error) {
-	gorm_mysql, err := gorm.Open(mysql.Open(viper.GetString("mysql.dsn")))
+func initLogger() logger.Logger {
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	return logger.NewZapLogger(l)
+}
+
+func initDB(l logger.Logger) (*gorm.DB, error) {
+	fmt.Println(viper.GetInt64("mysql.slow_time"))
+	gorm_mysql, err := gorm.Open(
+		mysql.Open(viper.GetString("mysql.dsn")),
+		&gorm.Config{
+			SkipDefaultTransaction:                   true,
+			DisableForeignKeyConstraintWhenMigrating: true,
+			NowFunc: func() time.Time {
+				return time.Now().Local()
+			},
+			Logger: gormLogger.New(
+				gormLoggerFunc(l.Debug),
+				gormLogger.Config{
+					// 慢查询阈值设置
+					SlowThreshold:             time.Second,
+					IgnoreRecordNotFoundError: false,
+					ParameterizedQueries:      false,
+					Colorful:                  false,
+					LogLevel:                  gormLogger.Info,
+				},
+			),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -78,28 +118,58 @@ func initRedis() (redis.Cmdable, error) {
 	return redisCli, redisCli.Ping(context.Background()).Err()
 }
 
-func initGinServer() *gin.Engine {
-	ginsrv := gin.Default()
-	ginsrv.Use(
-		cors.New(cors.Config{
-			AllowAllOrigins: true,
+func initMiddlewares(redisCmd redis.Cmdable, l logger.Logger) []gin.HandlerFunc {
+	bd := middleware.NewBuilder(func(ctx context.Context, al *middleware.AccessLog) {
+		l.Debug("HTTP请求", logger.Field{Key: "al", Val: al})
+	}).AllowReqBody(true).AllowRespBody()
+	//viper.OnConfigChange(func(in fsnotify.Event) {
+	//	ok := viper.GetBool("web.logreq")
+	//	bd.AllowReqBody(ok)
+	//})
+	return []gin.HandlerFunc{
+		corsHdl(),
+		bd.Build(),
+		middleware.NewLoginJWTMiddlewareBuilder().
+			IgnorePaths("/users/signup").
+			IgnorePaths("/users/login").
+			Build(),
+		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
+	}
+}
 
-			//AllowCredentials: true,
-			// 允许前端携带token字段
-			AllowHeaders: []string{"Content-Type", "Authorization"},
+func corsHdl() gin.HandlerFunc {
+	return cors.New(cors.Config{
+		//AllowCredentials: true,
+		// 允许前端携带token字段
+		AllowHeaders: []string{"Content-Type", "Authorization"},
 
-			// 允许前端访问后端响应中带的头部
-			ExposeHeaders: []string{"x-jwt-token"},
+		// 允许前端访问后端响应中带的头部
+		ExposeHeaders: []string{"x-jwt-token"},
 
-			AllowOriginFunc: func(origin string) bool {
-				return true
-			},
-			MaxAge: 24 * time.Hour,
-		}),
-
-		func(ctx *gin.Context) {
-			println("add middleware")
+		AllowOriginFunc: func(origin string) bool {
+			return true
 		},
-	)
+		MaxAge: 24 * time.Hour,
+	})
+}
+
+func initGinServer(mdls []gin.HandlerFunc) *gin.Engine {
+	ginsrv := gin.Default()
+	ginsrv.Use(mdls...)
 	return ginsrv
+}
+
+type gormLoggerFunc func(msg string, fields ...logger.Field)
+
+func (g gormLoggerFunc) Printf(msg string, args ...interface{}) {
+	g(msg, logger.Field{Key: msg, Val: args})
+}
+
+func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
+	userCache := cache.NewUserCache(cace)
+	userDao := dao.NewUserDAO(db)
+	userRepo := repository.NewUserRepository(userDao, userCache)
+	userSrv := service.NewUserService(userRepo)
+	userCtrl := web.NewUserHandler(userSrv)
+	userCtrl.RegisterRoutes(ginEngine)
 }
