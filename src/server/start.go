@@ -3,7 +3,9 @@ package server
 import (
 	"fmt"
 	"github.com/gin-contrib/cors"
+	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/solunara/isb/src/model"
 	"github.com/spf13/viper"
 	"log"
 )
@@ -22,13 +24,28 @@ func Start() {
 		return
 	}
 
+	err = dbCli.AutoMigrate(&model.User{})
+	if err != nil {
+		log.Printf("[Err] AutoMigrate: %v", err)
+		return
+	}
+
 	redisCli, err := initRedis()
 	if err != nil {
 		log.Printf("[Err] init redis client: %v", err)
 		return
 	}
 
-	ginServer := initGinServer(initMiddlewares(redisCli, initLogger()))
+	store, err := sessionsredis.NewStore(16,
+		"tcp", viper.GetString("redis.addr"), "",
+		[]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), []byte("0Pf2r0wZBpXVXlQNdpwCXN4ncnlnZSc3"))
+
+	if err != nil {
+		log.Printf("[Err] sessionsredis.NewStore: %v", err)
+		return
+	}
+
+	ginServer := initGinServer(initMiddlewares(redisCli, store, initLogger()))
 
 	initRouters(ginServer, dbCli, redisCli)
 

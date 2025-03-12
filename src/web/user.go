@@ -113,6 +113,7 @@ func (h *UserHandler) LoginWithEmail(ctx *gin.Context) {
 	u, err := h.usersvc.LoginWithEmailPwd(ctx, req.Email, req.Password)
 	switch err {
 	case nil:
+
 		sess := sessions.Default(ctx)
 		sess.Set("userId", u.Id)
 		sess.Options(sessions.Options{
@@ -126,7 +127,7 @@ func (h *UserHandler) LoginWithEmail(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, app.ErrInternalServer)
 			return
 		}
-		ctx.JSON(http.StatusOK, "登录成功")
+		ctx.JSON(http.StatusOK, app.ResponseOK("登录成功"))
 	case app.ErrInvalidUserOrPassword:
 		ctx.JSON(http.StatusOK, app.ErrBadRequestErrInvalidUserOrPassword)
 	default:

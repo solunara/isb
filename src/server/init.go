@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/gin-contrib/sessions"
+	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/repository/dao"
@@ -118,7 +120,7 @@ func initRedis() (redis.Cmdable, error) {
 	return redisCli, redisCli.Ping(context.Background()).Err()
 }
 
-func initMiddlewares(redisCmd redis.Cmdable, l logger.Logger) []gin.HandlerFunc {
+func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger.Logger) []gin.HandlerFunc {
 	bd := middleware.NewBuilder(func(ctx context.Context, al *middleware.AccessLog) {
 		l.Debug("HTTP请求", logger.Field{Key: "al", Val: al})
 	}).AllowReqBody(true).AllowRespBody()
@@ -126,9 +128,11 @@ func initMiddlewares(redisCmd redis.Cmdable, l logger.Logger) []gin.HandlerFunc 
 	//	ok := viper.GetBool("web.logreq")
 	//	bd.AllowReqBody(ok)
 	//})
+
 	return []gin.HandlerFunc{
 		corsHdl(),
 		bd.Build(),
+		sessions.Sessions("mysession", store),
 		middleware.NewLoginJWTMiddlewareBuilder().
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
