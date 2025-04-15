@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/gin-contrib/cors"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/solunara/isb/src/model"
 	"github.com/spf13/viper"
-	"log"
 )
 
 func Start() {
@@ -24,7 +25,7 @@ func Start() {
 		return
 	}
 
-	err = dbCli.AutoMigrate(&model.User{})
+	err = dbCli.AutoMigrate(&model.User{}, &model.MsUser{})
 	if err != nil {
 		log.Printf("[Err] AutoMigrate: %v", err)
 		return
