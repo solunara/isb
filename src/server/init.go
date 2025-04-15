@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
+
 	"github.com/gin-contrib/sessions"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/solunara/isb/src/repository"
@@ -14,7 +16,6 @@ import (
 	"github.com/solunara/isb/src/web"
 	"github.com/solunara/isb/src/web/middleware"
 	"go.uber.org/zap"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -170,10 +171,19 @@ func (g gormLoggerFunc) Printf(msg string, args ...interface{}) {
 }
 
 func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
+	// vbook-api
 	userCache := cache.NewUserCache(cace)
 	userDao := dao.NewUserDAO(db)
 	userRepo := repository.NewUserRepository(userDao, userCache)
 	userSrv := service.NewUserService(userRepo)
 	userCtrl := web.NewUserHandler(userSrv)
 	userCtrl.RegisterRoutes(ginEngine)
+
+	// ms-api
+	msGroup := ginEngine.Group("/ms")
+	msUserDao := dao.NewMsUserDAO(db)
+	msUserRepo := repository.NewMsUserRepository(msUserDao)
+	msUserSrv := service.NewMsUserService(msUserRepo)
+	msUserCtrl := web.NewMsUserHandler(msUserSrv)
+	msUserCtrl.RegisterRoutes(msGroup)
 }
