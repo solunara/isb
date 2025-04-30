@@ -8,13 +8,13 @@ const (
 )
 
 type Hospital struct {
-	HospitalID          string  `json:"hospital_id" gorm:"column:hospital_id;primaryKey;size:64;not null;comment:医院唯一编码"`
-	HospitalName        string  `json:"hospital_name" gorm:"column:hospital_name;size:128;not null;comment:医院全称"`
-	HospitalShortName   string  `json:"hospital_short_name" gorm:"column:hospital_short_name;size:64;comment:医院简称"`
-	HospitalTypeCode    string  `json:"hospital_type_code" gorm:"column:hospital_type_code;size:10;comment:医院类型编码"`
-	HospitalTypeName    string  `json:"hospital_type_name" gorm:"column:hospital_type_name;size:64;comment:医院类型名称"`
-	HospitalGradeCode   string  `json:"hospital_grade_code" gorm:"column:hospital_grade_code;size:10;comment:医院等级编码"`
-	HospitalGradeName   string  `json:"hospital_grade_name" gorm:"column:hospital_grade_name;size:64;comment:医院等级名称"`
+	UID                 string  `json:"uid" gorm:"column:uid;primaryKey;size:64;not null;comment:医院唯一编码/卫健委登记号"`
+	FullName            string  `json:"full_name" gorm:"column:full_name;size:128;not null;comment:医院全称"`
+	ShortName           string  `json:"short_name" gorm:"column:short_name;size:64;comment:医院简称"`
+	TypeCode            string  `json:"type_code" gorm:"column:type_code;size:10;comment:医院类型编码"`
+	TypeName            string  `json:"type_name" gorm:"column:type_name;size:64;comment:医院类型名称"`
+	GradeCode           string  `json:"grade_code" gorm:"column:grade_code;size:10;comment:医院等级编码"`
+	GradeName           string  `json:"grade_name" gorm:"column:grade_name;size:64;comment:医院等级名称"`
 	EconomicTypeCode    string  `json:"economic_type_code" gorm:"column:economic_type_code;size:10;comment:经济类型编码"`
 	EconomicTypeName    string  `json:"economic_type_name" gorm:"column:economic_type_name;size:64;comment:经济类型名称"`
 	ProvinceCode        string  `json:"province_code" gorm:"column:province_code;size:6;comment:省份编码"`
@@ -32,8 +32,8 @@ type Hospital struct {
 	LogoUrl             string  `json:"logo_url" gorm:"column:logo_url;size:128;comment:logo图片地址"`
 	Longitude           float64 `json:"longitude" gorm:"column:longitude;type:decimal(10,6);comment:经度"`
 	Latitude            float64 `json:"latitude" gorm:"column:latitude;type:decimal(10,6);comment:纬度"`
-	LicenseExpiry       int64   `json:"license_expiry" gorm:"column:license_expiry;type:date;comment:许可证有效期"`
-	EstablishedAt       int64   `json:"established_at" gorm:"type:date;comment:成立时间"`
+	LicenseExpiry       string  `json:"license_expiry" gorm:"column:license_expiry;size:12;comment:许可证有效期"`
+	EstablishedAt       string  `json:"established_at" gorm:"size:12;comment:成立时间"`
 	CreatedAt           int64   `json:"created_at" gorm:"column:created_at;autoCreateTime;comment:创建时间"`
 	UpdatedAt           int64   `json:"updated_at" gorm:"column:updated_at;autoUpdateTime;comment:更新时间"`
 	IsMedicalInsurance  bool    `json:"is_medical_insurance" gorm:"column:is_medical_insurance;comment:是否支持医保"`
