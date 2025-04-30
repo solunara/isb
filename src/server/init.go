@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
+	"github.com/solunara/isb/src/model"
+	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/repository/dao"
@@ -15,6 +17,7 @@ import (
 	"github.com/solunara/isb/src/types/logger"
 	"github.com/solunara/isb/src/web"
 	"github.com/solunara/isb/src/web/middleware"
+	"github.com/solunara/isb/src/web/xytweb"
 	"go.uber.org/zap"
 
 	"github.com/gin-contrib/cors"
@@ -166,7 +169,7 @@ func initGinServer(mdls []gin.HandlerFunc) *gin.Engine {
 
 type gormLoggerFunc func(msg string, fields ...logger.Field)
 
-func (g gormLoggerFunc) Printf(msg string, args ...interface{}) {
+func (g gormLoggerFunc) Printf(msg string, args ...any) {
 	g(msg, logger.Field{Key: msg, Val: args})
 }
 
@@ -186,4 +189,22 @@ func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	msUserSrv := service.NewMsUserService(msUserRepo)
 	msUserCtrl := web.NewMsUserHandler(msUserSrv)
 	msUserCtrl.RegisterRoutes(msGroup)
+
+	// xyt-api
+	xytGroup := ginEngine.Group("/xyt")
+	xytHospitalCtrl := xytweb.NewXytHospitalHandler(db)
+	xytHospitalCtrl.RegisterRoutes(xytGroup)
+}
+
+func autoCreateTable(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&model.User{},
+		&model.MsUser{},
+
+		// xyt
+		&xytmodel.Hospital{},
+		&xytmodel.HospitalGrade{},
+		&xytmodel.City{},
+		&xytmodel.District{},
+	)
 }

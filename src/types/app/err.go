@@ -38,55 +38,66 @@ var (
 	ErrInternalServer = &ResponseType{
 		Code: ErrCodeInternalServer,
 		Msg:  "服务器内部错误",
+		Data: nil,
 	}
 
 	ErrBadRequest = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "请求参数格式错误",
+		Data: nil,
 	}
 
 	ErrBadRequestInvalidEmail = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "邮箱格式错误",
+		Data: nil,
 	}
 
 	ErrBadRequestInvalidPassword = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "the password must contain letters, numbers, special characters and not less than 8 digits",
+		Data: nil,
 	}
 
 	ErrBadRequestWrongPassword = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "密码错误",
+		Data: nil,
 	}
 
 	ErrBadRequestWrongBirthday = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "生日格式错误",
+		Data: nil,
 	}
 
 	ErrBadRequestErrInvalidUserOrPassword = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  ErrInvalidUserOrPassword.Error(),
+		Data: nil,
 	}
 
 	ErrUnauthorized = &ResponseType{
 		Code: ErrCodeUnauthorized,
 		Msg:  "未授权访问",
+		Data: nil,
 	}
 
 	ErrForbidden = &ResponseType{
 		Code: ErrCodeForbidden,
 		Msg:  "禁止访问",
+		Data: nil,
 	}
 
 	ErrNotFound = &ResponseType{
 		Code: ErrCodeNotFound,
 		Msg:  "资源不存在",
+		Data: nil,
 	}
 
 	ErrConflict = &ResponseType{
 		Code: ErrCodeConflict,
 		Msg:  "资源冲突",
+		Data: nil,
 	}
 )

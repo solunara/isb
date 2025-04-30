@@ -7,7 +7,6 @@ import (
 	"github.com/gin-contrib/cors"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/solunara/isb/src/model"
 	"github.com/spf13/viper"
 )
 
@@ -25,9 +24,9 @@ func Start() {
 		return
 	}
 
-	err = dbCli.AutoMigrate(&model.User{}, &model.MsUser{})
+	err = autoCreateTable(dbCli)
 	if err != nil {
-		log.Printf("[Err] AutoMigrate: %v", err)
+		log.Printf("[Err] autoCreateTable: %v", err)
 		return
 	}
 
