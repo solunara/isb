@@ -43,7 +43,13 @@ var (
 
 	ErrBadRequest = &ResponseType{
 		Code: ErrCodeBadRequest,
-		Msg:  "请求参数格式错误",
+		Msg:  "请求数据格式错误",
+		Data: nil,
+	}
+
+	ErrBadPhoneOrCode = &ResponseType{
+		Code: ErrCodeBadRequest,
+		Msg:  "手机号或验证码错误",
 		Data: nil,
 	}
 
