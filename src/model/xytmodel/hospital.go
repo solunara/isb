@@ -5,6 +5,7 @@ const (
 	TableHospitalGrade = "hospital_grade"
 	TableCity          = "city"
 	TableDistrict      = "district"
+	TableDepartment    = "department"
 )
 
 type Hospital struct {
@@ -41,13 +42,13 @@ type Hospital struct {
 }
 
 type HospitalGrade struct {
-	ID        uint   `json:"id" gorm:"primaryKey;autoIncrement;comment:自增主键"`
+	Id        uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id;comment:自增主键"`
 	GradeCode string `json:"grade_code" gorm:"column:grade_code;size:10;comment:医院等级编码"`
 	GradeName string `json:"grade_name" gorm:"column:grade_name;size:64;comment:医院等级名称"`
 }
 
 type City struct {
-	ID           uint   `gorm:"primaryKey;autoIncrement"`
+	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
 	CityName     string `json:"city_name" gorm:"column:city_name;type:varchar(100);not null;comment:城市名称"`
 	ProvinceName string `json:"province_name" gorm:"column:province_name;type:varchar(100);comment:省份名称"`
 	CityCode     string `json:"city_code" gorm:"column:city_code;size:6;comment:城市编码"`
@@ -57,13 +58,26 @@ type City struct {
 }
 
 type District struct {
-	ID           uint   `gorm:"primaryKey;autoIncrement"`
+	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
 	DistrictName string `json:"district_name" gorm:"column:district_name;type:varchar(100);not null;comment:区名称"`
 	DistrictCode string `json:"district_code" gorm:"column:district_code;size:6;comment:区编码"`
 	CityCode     string `json:"city_code" gorm:"column:city_code;size:6;comment:城市编码"`
 	ProvinceCode string `json:"province_code" gorm:"column:province_code;size:6;comment:省份编码"`
-	CreatedAt    int64
-	UpdatedAt    int64
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
+}
+
+type Department struct {
+	UID         string `json:"uid" gorm:"column:uid;primaryKey;size:64;not null;comment:科室唯一编码"`
+	HospitalID  string `gorm:"not null;index;size:64;" json:"hospital_id"` // 所属医院
+	Name        string `gorm:"type:varchar(100);not null" json:"name"`     // 科室名称
+	Description string `gorm:"type:text" json:"description"`               // 科室简介
+	ParentID    string `gorm:"size:64;index" json:"parent_id"`             // 上级科室ID，空表示顶级科室
+	Level       int    `gorm:"type:int;default:1" json:"level"`            // 科室层级
+	Status      bool   `gorm:"type:tinyint(1);default:1" json:"status"`    // 启用状态 true=启用，false=停用
+	SortOrder   int    `gorm:"type:int;default:0" json:"sort_order"`       // 排序字段
+	CreatedAt   int64  `json:"created_at"`
+	UpdatedAt   int64  `json:"updated_at"`
 }
 
 func (Hospital) TableName() string {
@@ -80,4 +94,8 @@ func (City) TableName() string {
 
 func (District) TableName() string {
 	return TableDistrict
+}
+
+func (Department) TableName() string {
+	return TableDepartment
 }

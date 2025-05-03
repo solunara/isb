@@ -194,6 +194,9 @@ func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	xytGroup := ginEngine.Group("/xyt")
 	xytHospitalCtrl := xytweb.NewXytHospitalHandler(db)
 	xytHospitalCtrl.RegisterRoutes(xytGroup)
+
+	xytUserCtrl := xytweb.NewXytUserlHandler(cace, db)
+	xytUserCtrl.RegisterRoutes(xytGroup)
 }
 
 func autoCreateTable(db *gorm.DB) error {
@@ -206,5 +209,8 @@ func autoCreateTable(db *gorm.DB) error {
 		&xytmodel.HospitalGrade{},
 		&xytmodel.City{},
 		&xytmodel.District{},
+		&xytmodel.Department{},
+
+		&xytmodel.XytUser{},
 	)
 }
