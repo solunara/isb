@@ -7,10 +7,21 @@ type ResponseType struct {
 	Data any    `json:"data"`
 }
 
-// Error 自定义错误类型
 type ResponsePagaDataType struct {
 	List  any   `json:"list"`
 	Total int64 `json:"total"`
+}
+
+type BaseMap struct {
+	HosName    string `json:"hosName"`
+	FatherName string `json:"fatherName"`
+	Name       string `json:"name"`
+}
+
+type ResponseRegistrationPagaDataType struct {
+	List    any     `json:"list"`
+	BaseMap BaseMap `json:"baseMap"`
+	Total   int64   `json:"total"`
 }
 
 func Response(code int, message string, data interface{}) ResponseType {
@@ -43,6 +54,18 @@ func ResponsePageData(total int64, data any) ResponseType {
 		Data: ResponsePagaDataType{
 			List:  data,
 			Total: total,
+		},
+	}
+}
+
+func ResponseRegistrationPageData(total int64, list any, baseMap BaseMap) ResponseType {
+	return ResponseType{
+		Code: 200,
+		Msg:  "ok",
+		Data: ResponseRegistrationPagaDataType{
+			List:    list,
+			BaseMap: baseMap,
+			Total:   total,
 		},
 	}
 }

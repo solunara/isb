@@ -47,6 +47,12 @@ var (
 		Data: nil,
 	}
 
+	ErrBadRequestQuery = &ResponseType{
+		Code: ErrCodeBadRequest,
+		Msg:  "请求参数缺失",
+		Data: nil,
+	}
+
 	ErrBadPhoneOrCode = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "手机号或验证码错误",
@@ -56,6 +62,12 @@ var (
 	ErrBadRequestInvalidEmail = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  "邮箱格式错误",
+		Data: nil,
+	}
+
+	ErrOutOfRange = &ResponseType{
+		Code: ErrCodeBadRequest,
+		Msg:  "超出数据范围",
 		Data: nil,
 	}
 
