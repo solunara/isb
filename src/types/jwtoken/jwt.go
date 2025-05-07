@@ -12,7 +12,8 @@ type JWT struct {
 }
 
 type CustomClaims struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	UserId string `json:"userId"`
 	jwt.StandardClaims
 }
 
@@ -22,9 +23,10 @@ func NewJWToken() *JWT {
 	}
 }
 
-func NewClaims(username, encryptedPassword string) CustomClaims {
+func NewClaims(username, encryptedPassword, userId string) CustomClaims {
 	return CustomClaims{
 		username + "@" + encryptedPassword,
+		userId,
 		jwt.StandardClaims{
 			NotBefore: int64(time.Now().Unix() - 1000),
 			ExpiresAt: int64(time.Now().Unix() + int64(72000)),

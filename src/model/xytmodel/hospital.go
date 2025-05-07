@@ -8,6 +8,9 @@ const (
 	TableCity          = "city"
 	TableDistrict      = "district"
 	TableDepartment    = "department"
+	TableSchedule      = "schedule"
+	TableDoctor        = "doctor"
+	TablePatient       = "patient"
 )
 
 // 医院表
@@ -128,7 +131,7 @@ type Registration struct {
 // 排班表
 type Schedule struct {
 	Id          int    `gorm:"column:id;primaryKey" json:"id"`
-	DocId       string `gorm:"not null;size:24;" json:"docId"`
+	DocId       string `gorm:"column:doc_id;not null;size:24;" json:"docId"`
 	HosID       string `gorm:"column:hos_id;size:24;" json:"hosId"`
 	DeptID      string `gorm:"column:dept_id;size:64;" json:"deptId"`
 	WorkDate    string `gorm:"column:work_date;size:12;" json:"workDate"`
@@ -137,6 +140,20 @@ type Schedule struct {
 	WorkWeek    int    `gorm:"column:work_week;not null" json:"workWeek"`
 	MaxPatients int    `gorm:"column:max_patients;default:20" json:"maxPatients"`
 	Registered  int    `gorm:"column:registered;default:0" json:"registered"`
+}
+
+// 就诊人表
+type Patient struct {
+	Id        int       `gorm:"column:id;primaryKey" json:"id"`
+	UserId    string    `gorm:"column:user_id;not null;size:64;" json:"userId"`
+	PatientId string    `gorm:"column:patient_id;not null;size:64;unique" json:"patientId"`
+	IdNumber  string    `gorm:"column:id_number;type=varchar(24)" json:"idNumber"`
+	Name      string    `gorm:"column:name;not null;size:64;" json:"name"`
+	Birthday  string    `gorm:"column:birthday;not null;size:24;" json:"birthday"`
+	Phone     string    `gorm:"column:phone;not null;size:16;" json:"phone"`
+	Sex       bool      `gorm:"column:sex;not null" json:"sex"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (Hospital) TableName() string {
@@ -157,4 +174,16 @@ func (District) TableName() string {
 
 func (Department) TableName() string {
 	return TableDepartment
+}
+
+func (Schedule) TableName() string {
+	return TableSchedule
+}
+
+func (Doctor) TableName() string {
+	return TableDoctor
+}
+
+func (Patient) TableName() string {
+	return TablePatient
 }

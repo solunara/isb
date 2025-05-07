@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/types/app"
@@ -88,14 +89,15 @@ func (xh *XytUserHandler) loginByPhone(ctx *gin.Context) {
 	}
 
 	tokenVal, err := jwtoken.NewJWToken().CreateJWToken(jwtoken.CustomClaims{
-		Name: xytuser.Nickname,
+		Name:   xytuser.Name,
+		UserId: xytuser.UserId,
 	})
 	if err != nil {
 		ctx.JSON(http.StatusOK, app.ErrInternalServer)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"name": xytuser.Nickname, "token": tokenVal}))
+	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"name": xytuser.Name, "userId": xytuser.UserId, "token": tokenVal}))
 }
 
 func (xh *XytUserHandler) wechatParam(ctx *gin.Context) {
@@ -116,14 +118,12 @@ func FindOrCreateByPhone(db *gorm.DB, phone string) (xytmodel.XytUser, error) {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return xytmodel.XytUser{}, err
 		}
-		xytuser.Nickname = fmt.Sprintf("用户_%s****%s", phone[:3], phone[len(phone)-4:])
+		xytuser.UserId = uuid.New().String()
+		xytuser.Name = fmt.Sprintf("用户_%s****%s", phone[:3], phone[len(phone)-4:])
 		xytuser.Phone = sql.NullString{
 			String: phone,
 			Valid:  true,
 		}
-		tnow := time.Now().Unix()
-		xytuser.Ctime = tnow
-		xytuser.Utime = tnow
 		err = db.Create(&xytuser).Error
 		if err != nil {
 			return xytmodel.XytUser{}, err
@@ -131,4 +131,29 @@ func FindOrCreateByPhone(db *gorm.DB, phone string) (xytmodel.XytUser, error) {
 		return xytuser, nil
 	}
 	return xytuser, nil
+}
+
+func CreatePatient(db *gorm.DB, data AddPatientReq) error {
+	var xytpatient = xytmodel.Patient{
+		UserId:    data.UserId,
+		PatientId: uuid.NewString(),
+		Name:      data.Name,
+		Birthday:  data.Birthday,
+		Phone:     data.Phone,
+		Sex:       data.Sex,
+	}
+	var user xytmodel.XytUser
+	err := db.Table(xytmodel.TableXytUser).Where("user_id = ?", data.UserId).Take(&user).Error
+	if err != nil {
+		return app.ErrUserNotFound
+	}
+	err = db.Table(xytmodel.TablePatient).Create(&xytpatient).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrDuplicatedKey) {
+			return err
+		}
+		xytpatient.UserId = uuid.NewString()
+		return db.Table(xytmodel.TablePatient).Create(&xytpatient).Error
+	}
+	return nil
 }

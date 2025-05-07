@@ -37,6 +37,9 @@ func (xh *XytHospitalHandler) RegisterRoutes(group *gin.RouterGroup) {
 	ug.GET("/detail", xh.hosDetail)
 	ug.GET("/department", xh.hosDepartment)
 	ug.GET("/scheduler", xh.docSchedules)
+	ug.POST("/add/patient", xh.addPatient)
+	ug.GET("/patient/list", xh.getPatients)
+	ug.GET("/register/doctor", xh.getDoctor)
 }
 
 func (xh *XytHospitalHandler) hosList(ctx *gin.Context) {
@@ -218,6 +221,7 @@ type DocScheduler struct {
 	DoctorName  string `json:"doctorName"`
 	Rank        string `json:"rank"`
 	Profile     string `json:"profile"`
+	WorkDay     string `json:"workDay"`
 	Amount      int    `json:"amount"`
 	MaxPatients int    `json:"maxPatients"`
 	Registered  int    `json:"registered"`
@@ -371,6 +375,130 @@ func (xh *XytHospitalHandler) getOrCreateDocScheduler(hosId, deptId string, t ti
 	return docSchedulerToView(scheduler, docs), nil
 }
 
+type AddPatientReq struct {
+	UserId   string `json:"userId"`
+	Name     string `json:"name"`
+	IdNumber string `json:"idNumber"`
+	Phone    string `json:"phone"`
+	Birthday string `json:"birthday"`
+	Sex      bool   `json:"sex"`
+}
+
+func (xh *XytHospitalHandler) addPatient(ctx *gin.Context) {
+	var req AddPatientReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, app.ErrBadRequest)
+		return
+	}
+
+	err := CreatePatient(xh.db, req)
+	if err != nil {
+		if !errors.Is(err, app.ErrUserNotFound) {
+			ctx.JSON(http.StatusOK, app.ErrInternalServer)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ResponseErr(404, app.ErrUserNotFound.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+}
+
+func (xh *XytHospitalHandler) getPatients(ctx *gin.Context) {
+	userId := ctx.Query("userId")
+	var patients []xytmodel.Patient
+	err := xh.db.Table(xytmodel.TablePatient).Where("user_id = ?", userId).Find(&patients).Error
+	if err != nil {
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+	ctx.JSON(http.StatusOK, app.ResponseOK(patients))
+}
+
+type DocRegister struct {
+	DocId      string `json:"docId"`
+	DoctorName string `json:"doctorName"`
+	Rank       string `json:"rank"`
+	Profile    string `json:"profile"`
+	WorkDay    string `json:"workDay"`
+	HosName    string `json:"hosName"`
+	DeptName   string `json:"deptName"`
+	Amount     int    `json:"amount"`
+}
+
+func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
+	docId := ctx.Query("docId")
+	hosId := ctx.Query("hosId")
+	workDay := ctx.Query("workDay")
+	var doctor xytmodel.Doctor
+	err := xh.db.Table(xytmodel.TableDoctor).Where("id = ?", docId).Take(&doctor).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusOK, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	var schedule xytmodel.Schedule
+	err = xh.db.Table(xytmodel.TableSchedule).Where("doc_id = ? and hos_id = ? and work_date = ?", docId, hosId, workDay).Take(&schedule).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusOK, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	var hos xytmodel.Hospital
+	err = xh.db.Table(xytmodel.TableHospital).Where("uid = ?", hosId).Take(&hos).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusOK, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	var dept xytmodel.Department
+	err = xh.db.Table(xytmodel.TableDepartment).Where("uid = ? and hospital_id = ?", schedule.DeptID, hosId).Take(&dept).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusOK, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	var amount = 0
+	switch doctor.Rank {
+	case "主任医师":
+		amount = 30
+	case "副主任医师":
+		amount = 20
+	case "特需门诊":
+		amount = 100
+	default:
+		amount = 10
+	}
+
+	var result = DocRegister{
+		DocId:      docId,
+		DoctorName: doctor.Name,
+		Rank:       doctor.Rank,
+		Profile:    doctor.Profile,
+		WorkDay:    workDay,
+		HosName:    hos.FullName,
+		DeptName:   dept.Name,
+		Amount:     amount,
+	}
+	ctx.JSON(http.StatusOK, app.ResponseOK(result))
+}
+
 func docSchedulerToView(sche []xytmodel.Schedule, docs []xytmodel.Doctor) DeptSchedule {
 	var result = DeptSchedule{
 		Date:    sche[0].WorkDate,
@@ -384,6 +512,7 @@ func docSchedulerToView(sche []xytmodel.Schedule, docs []xytmodel.Doctor) DeptSc
 			DoctorName:  docs[i].Name,
 			Rank:        docs[i].Rank,
 			Profile:     docs[i].Profile,
+			WorkDay:     sche[i].WorkDate,
 			Amount:      sche[i].Amount,
 			MaxPatients: sche[i].MaxPatients,
 			Registered:  sche[i].Registered,

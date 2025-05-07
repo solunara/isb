@@ -21,6 +21,7 @@ var (
 // service err
 var (
 	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
+	ErrUserNotFound          = errors.New("用户不存在")
 )
 
 // 预定义错误码

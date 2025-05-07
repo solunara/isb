@@ -1,26 +1,34 @@
 package xytmodel
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 const (
 	TableXytUser = "xyt_user"
 )
 
 type XytUser struct {
-	Id    int64          `gorm:"primaryKey,autoIncrement" json:"id"`
-	Phone sql.NullString `gorm:"unique" json:"phone"`
+	Id     int64  `gorm:"primaryKey,autoIncrement" json:"id"`
+	UserId string `gorm:"type=varchar(128);unique" json:"userId"`
+
 	Email sql.NullString `gorm:"unique" json:"email"`
+	Phone sql.NullString `gorm:"unique" json:"phone"`
 
 	// encrypted password
 	Password string `gorm:"type=varchar(256)" json:"password"`
 
-	Nickname string `gorm:"type=varchar(128)" json:"nickname"`
-	Profile  string `gorm:"type=varchar(4096)" json:"profile"`
+	Name    string `gorm:"type=varchar(128)" json:"name"`
+	Profile string `gorm:"type=varchar(4096)" json:"profile"`
 
-	// unix time
-	Birthday int64 `json:"birthday"`
-	Ctime    int64 `json:"ctime"`
-	Utime    int64 `json:"utime"`
+	//
+	IdNumber string `gorm:"type=varchar(24)" json:"idNumber"`
+
+	Birthday string `gorm:"type=varchar(24)" json:"birthday"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (XytUser) TableName() string {

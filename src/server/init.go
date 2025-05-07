@@ -214,6 +214,7 @@ func autoCreateTable(db *gorm.DB) error {
 		&xytmodel.Doctor{},
 		&xytmodel.RegistrationType{},
 		&xytmodel.Schedule{},
+		&xytmodel.Patient{},
 
 		&xytmodel.XytUser{},
 	)
