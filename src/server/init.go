@@ -210,6 +210,11 @@ func autoCreateTable(db *gorm.DB) error {
 		&xytmodel.City{},
 		&xytmodel.District{},
 		&xytmodel.Department{},
+		&xytmodel.Registration{},
+		&xytmodel.Doctor{},
+		&xytmodel.RegistrationType{},
+		&xytmodel.Schedule{},
+		&xytmodel.Patient{},
 
 		&xytmodel.XytUser{},
 	)

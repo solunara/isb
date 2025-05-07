@@ -1,13 +1,19 @@
 package xytmodel
 
+import "time"
+
 const (
 	TableHospital      = "hospital"
 	TableHospitalGrade = "hospital_grade"
 	TableCity          = "city"
 	TableDistrict      = "district"
 	TableDepartment    = "department"
+	TableSchedule      = "schedule"
+	TableDoctor        = "doctor"
+	TablePatient       = "patient"
 )
 
+// 医院表
 type Hospital struct {
 	UID                 string  `json:"uid" gorm:"column:uid;primaryKey;size:64;not null;comment:医院唯一编码/卫健委登记号"`
 	FullName            string  `json:"full_name" gorm:"column:full_name;size:128;not null;comment:医院全称"`
@@ -41,12 +47,14 @@ type Hospital struct {
 	IsActive            bool    `json:"is_active" gorm:"column:is_active;default:true;comment:是否启用"`
 }
 
+// 医院等级表
 type HospitalGrade struct {
 	Id        uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id;comment:自增主键"`
 	GradeCode string `json:"grade_code" gorm:"column:grade_code;size:10;comment:医院等级编码"`
 	GradeName string `json:"grade_name" gorm:"column:grade_name;size:64;comment:医院等级名称"`
 }
 
+// 城市表
 type City struct {
 	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
 	CityName     string `json:"city_name" gorm:"column:city_name;type:varchar(100);not null;comment:城市名称"`
@@ -57,6 +65,7 @@ type City struct {
 	UpdatedAt    int64
 }
 
+// 区县表
 type District struct {
 	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
 	DistrictName string `json:"district_name" gorm:"column:district_name;type:varchar(100);not null;comment:区名称"`
@@ -67,6 +76,7 @@ type District struct {
 	UpdatedAt    int64  `json:"updated_at"`
 }
 
+// 科室表
 type Department struct {
 	UID         string `json:"uid" gorm:"column:uid;primaryKey;size:64;not null;comment:科室唯一编码"`
 	HospitalID  string `gorm:"not null;index;size:64;" json:"hospital_id"` // 所属医院
@@ -78,6 +88,72 @@ type Department struct {
 	SortOrder   int    `gorm:"type:int;default:0" json:"sort_order"`       // 排序字段
 	CreatedAt   int64  `json:"created_at"`
 	UpdatedAt   int64  `json:"updated_at"`
+}
+
+// 医生表
+type Doctor struct {
+	Id        string `gorm:"column:id;size:24;primaryKey" json:"id"`
+	Name      string `gorm:"column:name;size:50;not null" json:"name"`
+	Rank      string `gorm:"column:rank;size:50" json:"rank"`
+	DeptId    string `gorm:"column:dept_id;size:64;not null" json:"deptId"`
+	HosId     string `gorm:"column:hos_id;size:24;not null" json:"hosId"`
+	Profile   string `gorm:"column:profile;size:300" json:"profile"`
+	Phone     string `gorm:"column:phone;size:15" json:"phone"`
+	Email     string `gorm:"column:email;size:100" json:"email"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
+// 挂号类型表
+type RegistrationType struct {
+	ID          uint    `gorm:"primaryKey" json:"id"`
+	Name        string  `gorm:"size:50;not null" json:"name"`
+	Fee         float64 `gorm:"type:decimal(10,2);default:0.00" json:"fee"`
+	Description string  `gorm:"type:text" json:"description"`
+}
+
+// 挂号表
+type Registration struct {
+	Id        uint      `gorm:"primaryKey" json:"id"`
+	PatientId uint      `gorm:"not null" json:"patientId"`
+	DocId     uint      `gorm:"not null;size:24;" json:"docId"`
+	HosID     string    `gorm:"column:hos_id;size:24;" json:"hosId"`
+	DeptID    string    `gorm:"column:dept_id;size:64;" json:"deptId"`
+	RegType   uint      `gorm:"not null" json:"regType"`
+	RegTime   string    `gorm:"not null;size:32;" json:"regTime"`
+	VisitTime string    `gorm:"not null;size:32;" json:"visitTime,omitempty"`
+	Status    string    `gorm:"type:enum('已挂号','已就诊','取消');default:'已挂号'" json:"status"`
+	Fee       float64   `gorm:"type:decimal(10,2);default:0.00" json:"fee"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// 排班表
+type Schedule struct {
+	Id          int    `gorm:"column:id;primaryKey" json:"id"`
+	DocId       string `gorm:"column:doc_id;not null;size:24;" json:"docId"`
+	HosID       string `gorm:"column:hos_id;size:24;" json:"hosId"`
+	DeptID      string `gorm:"column:dept_id;size:64;" json:"deptId"`
+	WorkDate    string `gorm:"column:work_date;size:12;" json:"workDate"`
+	TimeSlot    string `gorm:"column:time_slot;type:enum('上午','下午','晚上');not null" json:"timeSlot"`
+	Amount      int    `gorm:"column:amount;not null" json:"amount"`
+	WorkWeek    int    `gorm:"column:work_week;not null" json:"workWeek"`
+	MaxPatients int    `gorm:"column:max_patients;default:20" json:"maxPatients"`
+	Registered  int    `gorm:"column:registered;default:0" json:"registered"`
+}
+
+// 就诊人表
+type Patient struct {
+	Id        int       `gorm:"column:id;primaryKey" json:"id"`
+	UserId    string    `gorm:"column:user_id;not null;size:64;" json:"userId"`
+	PatientId string    `gorm:"column:patient_id;not null;size:64;unique" json:"patientId"`
+	IdNumber  string    `gorm:"column:id_number;type=varchar(24)" json:"idNumber"`
+	Name      string    `gorm:"column:name;not null;size:64;" json:"name"`
+	Birthday  string    `gorm:"column:birthday;not null;size:24;" json:"birthday"`
+	Phone     string    `gorm:"column:phone;not null;size:16;" json:"phone"`
+	Sex       bool      `gorm:"column:sex;not null" json:"sex"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (Hospital) TableName() string {
@@ -98,4 +174,16 @@ func (District) TableName() string {
 
 func (Department) TableName() string {
 	return TableDepartment
+}
+
+func (Schedule) TableName() string {
+	return TableSchedule
+}
+
+func (Doctor) TableName() string {
+	return TableDoctor
+}
+
+func (Patient) TableName() string {
+	return TablePatient
 }
