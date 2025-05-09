@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
+	"github.com/solunara/isb/src/config"
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/repository"
@@ -140,6 +144,13 @@ func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 		middleware.NewLoginJWTMiddlewareBuilder().
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
+			IgnorePaths("/xyt/user/phone/code").
+			IgnorePaths("/xyt/user/login/phone").
+			IgnorePaths("/xyt/hos/list").
+			IgnorePaths("/xyt/hos/grade").
+			IgnorePaths("/xyt/hos/region").
+			IgnorePaths("/xyt/hos/detail").
+			IgnorePaths("/xyt/hos/department").
 			Build(),
 		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
 	}
@@ -149,10 +160,10 @@ func corsHdl() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		//AllowCredentials: true,
 		// 允许前端携带token字段
-		AllowHeaders: []string{"Content-Type", "Authorization"},
+		AllowHeaders: []string{config.HTTTP_HEADER_AUTH},
 
 		// 允许前端访问后端响应中带的头部
-		ExposeHeaders: []string{"x-jwt-token"},
+		ExposeHeaders: []string{config.HTTP_HEADER_TOKEN},
 
 		AllowOriginFunc: func(origin string) bool {
 			return true
@@ -204,18 +215,205 @@ func autoCreateTable(db *gorm.DB) error {
 		&model.User{},
 		&model.MsUser{},
 
-		// xyt
+		/* ---------------- xyt --------------- */
+		// 医院信息表
 		&xytmodel.Hospital{},
 		&xytmodel.HospitalGrade{},
-		&xytmodel.City{},
-		&xytmodel.District{},
 		&xytmodel.Department{},
 		&xytmodel.Registration{},
 		&xytmodel.Doctor{},
 		&xytmodel.RegistrationType{},
 		&xytmodel.Schedule{},
 		&xytmodel.Patient{},
+		&xytmodel.RegisterOrder{},
 
+		// 城市表
+		&xytmodel.Province{},
+		&xytmodel.City{},
+		&xytmodel.District{},
+
+		// 用户表
 		&xytmodel.XytUser{},
 	)
+}
+
+// 省 1级数据
+type CitiesLevelOne struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// 省/市 2级数据
+type CitiesLevelTwo struct {
+	Code     string           `json:"code"`
+	Name     string           `json:"name"`
+	Children []CitiesLevelOne `json:"children"`
+}
+
+// 省/市/区县 3级数据
+type CitiesLevelThree struct {
+	Code     string           `json:"code"`
+	Name     string           `json:"name"`
+	Children []CitiesLevelTwo `json:"children"`
+}
+
+func ReadJSONInsertToDB(db *gorm.DB) {
+	data, err := os.ReadFile("pca-code.json")
+	if err != nil {
+		panic(err)
+	}
+
+	var provinces []CitiesLevelThree
+	if err := json.Unmarshal(data, &provinces); err != nil {
+		panic(err)
+	}
+
+	var category uint8
+	var abbr Abbreviation
+	// now := time.Now().Unix()
+	for _, p := range provinces {
+		// 插入省
+		category = categoryByProvinceName(p.Name)
+		abbr = abbrByProvinceName(p.Name)
+		err = db.Table(xytmodel.TableProvince).Create(&xytmodel.Province{
+			Name:     p.Name,
+			Abbr_zh:  abbr.Zh,
+			Abbr_en:  abbr.En,
+			Code:     p.Code,
+			Category: category,
+		}).Error
+		if err != nil {
+			panic(err)
+		}
+		for _, c := range p.Children {
+			// 插入市
+			// fmt.Printf("INSERT INTO cities (name, code, province_name, province_code, category, created_at, updated_at) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d);\n",
+			// 	c.Name, c.Code, p.Name, p.Code, category, now, now)
+			err = db.Table(xytmodel.TableCity).Create(&xytmodel.City{
+				Name:         c.Name,
+				Code:         c.Code,
+				ProvinceName: p.Name,
+				ProvinceCode: p.Code,
+				Category:     category,
+			}).Error
+			if err != nil {
+				panic(err)
+			}
+			for _, d := range c.Children {
+				// 插入区/县
+				// fmt.Printf("INSERT INTO districts (name, code, city_name, city_code, created_at, updated_at) VALUES ('%s', '%s', '%s', '%s', %d, %d);\n",
+				// 	d.Name, d.Code, c.Name, c.Code, now, now)
+				err = db.Table(xytmodel.TableDistrict).Create(&xytmodel.District{
+					Name:         d.Name,
+					Code:         d.Code,
+					CityName:     c.Name,
+					CityCode:     c.Code,
+					ProvinceName: p.Name,
+					ProvinceCode: p.Code,
+					Category:     category,
+				}).Error
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
+}
+
+// 行政区划分类
+func categoryByProvinceName(name string) uint8 {
+	switch name {
+	case "北京市", "北京":
+		return 3
+	case "天津市", "天津":
+		return 3
+	case "上海市", "上海":
+		return 3
+	case "重庆市", "重庆":
+		return 3
+	}
+	if strings.Contains(name, "自治区") {
+		return 2
+	}
+	return 1
+}
+
+type Abbreviation struct {
+	Zh string // 中文简称，例如 "冀"
+	En string // 英文简称，例如 "HE"
+}
+
+func abbrByProvinceName(name string) Abbreviation {
+	switch name {
+	case "北京市":
+		return Abbreviation{"京", "BJ"}
+	case "天津市":
+		return Abbreviation{"津", "TJ"}
+	case "上海市":
+		return Abbreviation{"沪", "SH"}
+	case "重庆市":
+		return Abbreviation{"渝", "CQ"}
+	case "河北省":
+		return Abbreviation{"冀", "HE"}
+	case "山西省":
+		return Abbreviation{"晋", "SX"}
+	case "辽宁省":
+		return Abbreviation{"辽", "LN"}
+	case "吉林省":
+		return Abbreviation{"吉", "JL"}
+	case "黑龙江省":
+		return Abbreviation{"黑", "HL"}
+	case "江苏省":
+		return Abbreviation{"苏", "JS"}
+	case "浙江省":
+		return Abbreviation{"浙", "ZJ"}
+	case "安徽省":
+		return Abbreviation{"皖", "AH"}
+	case "福建省":
+		return Abbreviation{"闽", "FJ"}
+	case "江西省":
+		return Abbreviation{"赣", "JX"}
+	case "山东省":
+		return Abbreviation{"鲁", "SD"}
+	case "河南省":
+		return Abbreviation{"豫", "HA"}
+	case "湖北省":
+		return Abbreviation{"鄂", "HB"}
+	case "湖南省":
+		return Abbreviation{"湘", "HN"}
+	case "广东省":
+		return Abbreviation{"粤", "GD"}
+	case "海南省":
+		return Abbreviation{"琼", "HI"}
+	case "四川省":
+		return Abbreviation{"川", "SC"}
+	case "贵州省":
+		return Abbreviation{"黔", "GZ"}
+	case "云南省":
+		return Abbreviation{"滇", "YN"}
+	case "陕西省":
+		return Abbreviation{"陕", "SN"}
+	case "甘肃省":
+		return Abbreviation{"甘", "GS"}
+	case "青海省":
+		return Abbreviation{"青", "QH"}
+	case "台湾省":
+		return Abbreviation{"台", "TW"}
+	case "内蒙古自治区":
+		return Abbreviation{"蒙", "NM"}
+	case "广西壮族自治区":
+		return Abbreviation{"桂", "GX"}
+	case "西藏自治区":
+		return Abbreviation{"藏", "XZ"}
+	case "宁夏回族自治区":
+		return Abbreviation{"宁", "NX"}
+	case "新疆维吾尔自治区":
+		return Abbreviation{"新", "XJ"}
+	case "香港特别行政区":
+		return Abbreviation{"港", "HK"}
+	case "澳门特别行政区":
+		return Abbreviation{"澳", "MO"}
+	default:
+		return Abbreviation{"", ""}
+	}
 }

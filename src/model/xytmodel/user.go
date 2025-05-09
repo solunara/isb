@@ -23,9 +23,12 @@ type XytUser struct {
 	Profile string `gorm:"type=varchar(4096)" json:"profile"`
 
 	//
+	IdTyper  string `gorm:"type=varchar(24)" json:"idType"`
 	IdNumber string `gorm:"type=varchar(24)" json:"idNumber"`
 
 	Birthday string `gorm:"type=varchar(24)" json:"birthday"`
+
+	Image []byte `json:"image"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
