@@ -22,6 +22,7 @@ var (
 var (
 	ErrInvalidUserOrPassword = errors.New("用户不存在或者密码不对")
 	ErrUserNotFound          = errors.New("用户不存在")
+	ErrMissingData           = "请求数据缺失"
 )
 
 // 预定义错误码
@@ -50,7 +51,7 @@ var (
 
 	ErrBadRequestQuery = &ResponseType{
 		Code: ErrCodeBadRequest,
-		Msg:  "请求参数缺失",
+		Msg:  ErrMissingData,
 		Data: nil,
 	}
 

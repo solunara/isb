@@ -157,19 +157,30 @@ func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 }
 
 func corsHdl() gin.HandlerFunc {
-	return cors.New(cors.Config{
-		//AllowCredentials: true,
-		// 允许前端携带token字段
-		AllowHeaders: []string{config.HTTTP_HEADER_AUTH},
+	var cfg = cors.DefaultConfig()
+	cfg.AddAllowHeaders(config.HTTTP_HEADER_AUTH)
+	cfg.AllowOriginFunc = func(origin string) bool {
+		return true
+	}
+	return cors.New(
+		cfg,
+	)
 
-		// 允许前端访问后端响应中带的头部
-		ExposeHeaders: []string{config.HTTP_HEADER_TOKEN},
+	// return cors.New(cors.Config{
+	// 	//AllowCredentials: true,
+	// 	// 允许前端携带token字段
+	// 	AllowHeaders: []string{config.HTTTP_HEADER_AUTH},
 
-		AllowOriginFunc: func(origin string) bool {
-			return true
-		},
-		MaxAge: 24 * time.Hour,
-	})
+	// 	AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"},
+
+	// 	// 允许前端访问后端响应中带的头部
+	// 	ExposeHeaders: []string{config.HTTP_HEADER_TOKEN},
+
+	// 	AllowOriginFunc: func(origin string) bool {
+	// 		return true
+	// 	},
+	// 	MaxAge: 24 * time.Hour,
+	// })
 }
 
 func initGinServer(mdls []gin.HandlerFunc) *gin.Engine {
@@ -208,6 +219,9 @@ func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 
 	xytUserCtrl := xytweb.NewXytUserlHandler(cace, db)
 	xytUserCtrl.RegisterRoutes(xytGroup)
+
+	xytCityCtrl := xytweb.NewXytCiteslHandler(db)
+	xytCityCtrl.RegisterRoutes(xytGroup)
 }
 
 func autoCreateTable(db *gorm.DB) error {

@@ -43,26 +43,31 @@ func (xh *XytUserHandler) RegisterRoutes(group *gin.RouterGroup) {
 	ug.GET("/patient/list", xh.getPatients)
 	ug.GET("/order/states", xh.getOrderStates)
 	ug.GET("/order/list", xh.getOrderList)
-	ug.POST("/patient", xh.addPatient)
-	ug.PUT("/patient", xh.updatePatient)
+	ug.POST("/add/patient", xh.addPatient)
+	ug.POST("/update/patient", xh.updatePatient)
+	ug.POST("/delete/patient", xh.deletePatient)
 }
 
 type AddOrUpdateUser struct {
 	Id                       string   `json:"id"`
 	Name                     string   `json:"name"`
-	CertificatesType         string   `json:"certificatesType"`
+	CertificatesType         int      `json:"certificatesType"`
 	CertificatesNo           string   `json:"certificatesNo"`
-	Sex                      int      `json:"sex"`
+	Sex                      uint8    `json:"sex"`
 	Birthdate                string   `json:"birthdate"`
 	Phone                    string   `json:"phone"`
-	IsMarry                  int      `json:"isMarry"`
-	IsInsure                 int      `json:"isInsure"`
+	IsMarry                  uint8    `json:"isMarry"`
+	IsInsure                 uint8    `json:"isInsure"`
 	AddressSelected          []string `json:"addressSelected"`
 	Address                  string   `json:"address"`
 	ContactsName             string   `json:"contactsName"`
-	ContactsCertificatesType string   `json:"contactsCertificatesType"`
+	ContactsCertificatesType uint8    `json:"contactsCertificatesType"`
 	ContactsCertificatesNo   string   `json:"contactsCertificatesNo"`
 	ContactsPhone            string   `json:"contactsPhone"`
+}
+
+type DeleteUser struct {
+	PatientId string `json:"patientId"`
 }
 
 type ViewUser struct {
@@ -88,10 +93,12 @@ func (xh *XytUserHandler) addPatient(ctx *gin.Context) {
 
 	var req AddOrUpdateUser
 	if err := ctx.Bind(&req); err != nil {
+		fmt.Println("err: ", err)
 		ctx.JSON(http.StatusOK, app.ErrBadRequest)
 		return
 	}
 
+	fmt.Println("req: ", req)
 	err := CreatePatient(xh.db, userid.(string), req)
 	if err != nil {
 		if errors.Is(err, app.ErrUserNotFound) {
@@ -124,6 +131,28 @@ func (xh *XytUserHandler) updatePatient(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, app.ErrNotFound)
 			return
 		}
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+}
+
+func (xh *XytUserHandler) deletePatient(ctx *gin.Context) {
+	userid, ok := ctx.Get(config.USER_ID)
+	if !ok {
+		ctx.JSON(http.StatusOK, app.ErrUnauthorized)
+		return
+	}
+
+	var req DeleteUser
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, app.ErrBadRequest)
+		return
+	}
+
+	err := DeletePatient(xh.db, userid.(string), req.PatientId)
+	if err != nil {
 		ctx.JSON(http.StatusOK, app.ErrInternalServer)
 		return
 	}
@@ -329,7 +358,7 @@ func (xh *XytUserHandler) loginByPhone(ctx *gin.Context) {
 		Phone string `json:"phone"`
 		Code  string `json:"code"`
 	}
-
+	fmt.Println("login")
 	var req LoginByPhoneReq
 	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(http.StatusOK, app.ErrBadRequest)
@@ -403,17 +432,28 @@ func FindOrCreateByPhone(db *gorm.DB, phone string) (xytmodel.XytUser, error) {
 }
 
 func CreatePatient(db *gorm.DB, userId string, data AddOrUpdateUser) error {
-	var sex bool
-	if data.Sex == 1 {
-		sex = true
+	if len(data.AddressSelected) < 3 {
+		return errors.New(app.ErrMissingData)
 	}
 	var xytpatient = xytmodel.Patient{
-		UserId:    userId,
-		PatientId: uuid.NewString(),
-		Name:      data.Name,
-		Birthday:  data.Birthdate,
-		Phone:     data.Phone,
-		Sex:       sex,
+		Id:                       utils.GenerateUinqueID(),
+		Name:                     data.Name,
+		UserId:                   userId,
+		ProvinceCode:             data.AddressSelected[0],
+		CityCode:                 data.AddressSelected[1],
+		DistrictCode:             data.AddressSelected[2],
+		CertificatesNo:           data.CertificatesNo,
+		Address:                  data.Address,
+		ContactsName:             data.ContactsName,
+		ContactsCertificatesNo:   data.ContactsCertificatesNo,
+		ContactsPhone:            data.ContactsPhone,
+		Birthday:                 data.Birthdate,
+		Phone:                    data.Phone,
+		CertificatesType:         uint8(data.CertificatesType),
+		ContactsCertificatesType: uint8(data.ContactsCertificatesType),
+		Sex:                      uint8(data.Sex),
+		IsMarry:                  data.IsMarry,
+		IsInsure:                 data.IsInsure,
 	}
 	var user xytmodel.XytUser
 	err := db.Table(xytmodel.TableXytUser).Where("user_id = ?", userId).Take(&user).Error
@@ -432,32 +472,60 @@ func CreatePatient(db *gorm.DB, userId string, data AddOrUpdateUser) error {
 }
 
 func UpdatePatient(db *gorm.DB, userId string, data AddOrUpdateUser) error {
-	var sex bool
-	if data.Sex == 1 {
-		sex = true
+	if len(data.AddressSelected) < 3 {
+		return errors.New(app.ErrMissingData)
 	}
-
 	var user xytmodel.XytUser
 	err := db.Table(xytmodel.TableXytUser).Where("user_id = ?", userId).Take(&user).Error
 	if err != nil {
 		return app.ErrUserNotFound
 	}
 	var patient xytmodel.Patient
-	err = db.Table(xytmodel.TablePatient).Where("patient_id = ?", data.Id).Take(&patient).Error
+	err = db.Table(xytmodel.TablePatient).Where("id = ?", data.Id).Take(&patient).Error
 	if err != nil {
 		return app.ErrUserNotFound
 	}
-	return db.Table(xytmodel.TablePatient).Where("patient_id = ?", data.Id).Updates(&xytmodel.Patient{
-		Name:     data.Name,
-		Birthday: data.Birthdate,
-		Phone:    data.Phone,
-		Sex:      sex,
+	return db.Table(xytmodel.TablePatient).Where("id = ?", data.Id).Updates(&xytmodel.Patient{
+		Name:                     data.Name,
+		UserId:                   userId,
+		ProvinceCode:             data.AddressSelected[0],
+		CityCode:                 data.AddressSelected[1],
+		DistrictCode:             data.AddressSelected[2],
+		CertificatesNo:           data.CertificatesNo,
+		Address:                  data.Address,
+		ContactsName:             data.ContactsName,
+		ContactsCertificatesNo:   data.ContactsCertificatesNo,
+		ContactsPhone:            data.ContactsPhone,
+		Birthday:                 data.Birthdate,
+		Phone:                    data.Phone,
+		CertificatesType:         uint8(data.CertificatesType),
+		ContactsCertificatesType: uint8(data.ContactsCertificatesType),
+		Sex:                      uint8(data.Sex),
+		IsMarry:                  data.IsMarry,
+		IsInsure:                 data.IsInsure,
 	}).Error
+}
+
+func DeletePatient(db *gorm.DB, userId string, id string) error {
+	var patient xytmodel.Patient
+	fmt.Println(id)
+	fmt.Println(userId)
+	err := db.Table(xytmodel.TablePatient).Where("id = ? and user_id = ?", id, userId).Take(&patient).Error
+	if err != nil {
+		fmt.Println("err1: ", err)
+		return nil
+	}
+	err = db.Delete(&patient).Error
+	if err != nil {
+		fmt.Println("err2: ", err)
+		return err
+	}
+	return nil
 }
 
 func CreateOrder(db *gorm.DB, data AddOrderReq) (string, error) {
 	var patient xytmodel.Patient
-	err := db.Table(xytmodel.TablePatient).Where("patient_id = ?", data.PatientId).Take(&patient).Error
+	err := db.Table(xytmodel.TablePatient).Where("id = ?", data.PatientId).Take(&patient).Error
 	if err != nil {
 		return "", err
 	}

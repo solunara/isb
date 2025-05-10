@@ -122,16 +122,47 @@ type Schedule struct {
 
 // 就诊人表
 type Patient struct {
-	Id        int       `gorm:"column:id;primaryKey" json:"id"`
-	UserId    string    `gorm:"column:user_id;not null;size:64;" json:"userId"`
-	PatientId string    `gorm:"column:patient_id;not null;size:64;unique" json:"patientId"`
-	IdNumber  string    `gorm:"column:id_number;type=varchar(24)" json:"idNumber"`
-	Name      string    `gorm:"column:name;not null;size:64;" json:"name"`
-	Birthday  string    `gorm:"column:birthday;not null;size:24;" json:"birthday"`
-	Phone     string    `gorm:"column:phone;not null;size:16;" json:"phone"`
-	Sex       bool      `gorm:"column:sex;not null" json:"sex"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Id                       string    `gorm:"column:id;primaryKey;size:64;common:就诊人唯一id" json:"id"`
+	Name                     string    `gorm:"column:name;not null;size:64;common:就诊人姓名" json:"name"`
+	UserId                   string    `gorm:"column:user_id;not null;size:64;common:就诊人所属用户id" json:"userId"`
+	ProvinceCode             string    `gorm:"column:province_code;not null;size:6;common:所在省份编码" json:"provinceCode"`
+	CityCode                 string    `gorm:"column:city_code;not null;size:6;common:所在市编码" json:"cityCode"`
+	DistrictCode             string    `gorm:"column:district_code;not null;size:6;common:所在区县编码" json:"districtCode"`
+	CertificatesNo           string    `gorm:"column:certificates_no;not null;size:24;common:实名号" json:"certificatesNo"`
+	Address                  string    `gorm:"column:address;not null;size:128;common:详细地址" json:"address"`
+	ContactsName             string    `gorm:"column:contacts_name;size:64;common:联系人姓名" json:"contactsName"`
+	ContactsCertificatesNo   string    `gorm:"column:contacts_certificates_no;size:24;common:联系人实名号" json:"contactsCertificatesNo"`
+	ContactsPhone            string    `gorm:"column:contacts_phone;size:16;common:联系人手机号" json:"contactsPhone"`
+	Birthday                 string    `gorm:"column:birthday;size:20;" json:"birthday"`
+	Phone                    string    `gorm:"column:phone;not null;size:16;" json:"phone"`
+	CertificatesType         uint8     `gorm:"column:certificates_type;not null;common:实名认证类型" json:"certificatesType"`            // 0: 身份证 1:户口本
+	ContactsCertificatesType uint8     `gorm:"column:contacts_certificates_type;common:联系人实名认证类型" json:"contactsCertificatesType"` // 0: 身份证 1:户口本
+	Sex                      uint8     `gorm:"column:sex;not null;common:性别" json:"sex"`                                           // 0:女性 1: 男性
+	IsMarry                  uint8     `gorm:"column:is_marry;common:是否已婚" json:"isMarry"`                                         // 0: 未婚 1:已婚
+	IsInsure                 uint8     `gorm:"column:is_insure;common:是否是医保用户" json:"isInsure"`                                    // 0: 医保 1:自费
+	CreatedAt                time.Time `json:"created_at"`
+	UpdatedAt                time.Time `json:"updated_at"`
+}
+
+// 挂号订单表
+type RegisterOrder struct {
+	Id           int       `gorm:"column:id;primaryKey" json:"id"`
+	UserId       string    `gorm:"column:user_id;not null;size:64;" json:"userId"`
+	OrderId      string    `gorm:"column:order_id;not null;size:64;unique;" json:"orderId"`
+	PatientId    string    `gorm:"column:patient_id;not null;size:64;" json:"patientId"`
+	HosID        string    `gorm:"column:hos_id;size:24;" json:"hosId"`
+	DeptID       string    `gorm:"column:dept_id;size:64;" json:"deptId"`
+	DocId        string    `gorm:"column:doc_id;not null;size:24;" json:"docId"`
+	HosName      string    `gorm:"column:hos_name;size:128;not null;" json:"hosName"`
+	DeptName     string    `gorm:"column:dept_name;size:32;not null;" json:"deptName"`
+	DocName      string    `gorm:"column:doc_name;size:24;not null;" json:"docName"`
+	PatientName  string    `gorm:"column:patient_name;size:24;not null;" json:"patientName"`
+	VisitTime    string    `gorm:"column:visit_time;not null;size:24;" json:"visitTime"`
+	Amount       int       `gorm:"column:amount;not null" json:"amount"`
+	State        int8      `gorm:"column:state;" json:"state"` // -1: 已取消  0: 待支付  1:已支付  2:已完成
+	RegisterTime string    `gorm:"column:register_time;not null;size:24;" json:"registerTime"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // 挂号订单表

@@ -158,16 +158,30 @@ func (xh *XytHospitalHandler) hosRegion(ctx *gin.Context) {
 		if err == nil {
 			cityName = unescapeCityName
 		}
-		err = xh.db.Table(xytmodel.TableCity).Where("name = ?", cityName).Take(&city).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				ctx.JSON(200, app.ResponseErr(404, "请指定一个存在的城市名字"))
+		switch cityName {
+		case "北京市", "上海市", "天津市", "重庆市", "北京", "上海", "天津", "重庆":
+			err = xh.db.Table(xytmodel.TableCity).Where("province_name = ?", cityName).Take(&city).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					ctx.JSON(200, app.ResponseErr(404, "请指定一个存在的城市名字"))
+					return
+				}
+				ctx.JSON(200, app.ErrInternalServer)
 				return
 			}
-			ctx.JSON(200, app.ErrInternalServer)
-			return
+			city_code = city.Code
+		default:
+			err = xh.db.Table(xytmodel.TableCity).Where("name = ?", cityName).Take(&city).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					ctx.JSON(200, app.ResponseErr(404, "请指定一个存在的城市名字"))
+					return
+				}
+				ctx.JSON(200, app.ErrInternalServer)
+				return
+			}
+			city_code = city.Code
 		}
-		city_code = city.Code
 	}
 
 	var district []xytmodel.District
