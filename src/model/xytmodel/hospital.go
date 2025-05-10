@@ -165,6 +165,27 @@ type RegisterOrder struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+// 挂号订单表
+type RegisterOrder struct {
+	Id           int       `gorm:"column:id;primaryKey" json:"id"`
+	UserId       string    `gorm:"column:user_id;not null;size:64;unique;" json:"userId"`
+	OrderId      string    `gorm:"column:order_id;not null;size:64;unique;" json:"orderId"`
+	PatientId    string    `gorm:"column:patient_id;not null;size:64;" json:"patientId"`
+	HosID        string    `gorm:"column:hos_id;size:24;" json:"hosId"`
+	DeptID       string    `gorm:"column:dept_id;size:64;" json:"deptId"`
+	DocId        string    `gorm:"column:doc_id;not null;size:24;" json:"docId"`
+	HosName      string    `gorm:"column:hos_name;size:128;not null;" json:"hosName"`
+	DeptName     string    `gorm:"column:dept_name;size:32;not null;" json:"deptName"`
+	DocName      string    `gorm:"column:doc_name;size:24;not null;" json:"docName"`
+	PatientName  string    `gorm:"column:patient_name;size:24;not null;" json:"patientName"`
+	VisitTime    string    `gorm:"column:visit_time;not null;size:24;" json:"visitTime"`
+	Amount       int       `gorm:"column:amount;not null" json:"amount"`
+	State        int8      `gorm:"column:state;" json:"state"` // -1: 已取消  0: 待支付  1:已支付  2:已完成
+	RegisterTime string    `gorm:"column:register_time;not null;size:24;" json:"registerTime"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 func (Hospital) TableName() string {
 	return TableHospital
 }

@@ -61,3 +61,18 @@ func verifyToken(ctx *gin.Context) {
 	ctx.Set(config.USER_ID, claims.UserId)
 	ctx.Next()
 }
+
+func verifyToken(ctx *gin.Context) {
+	token := ctx.GetHeader(config.HTTTP_HEADER_AUTH)
+	if token == "" {
+		ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+		return
+	}
+	claims, err := jwtoken.NewJWToken().ParesJWToken(token)
+	if err != nil {
+		ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+		return
+	}
+	ctx.Set(config.USER_ID, claims.UserId)
+	ctx.Next()
+}
