@@ -25,12 +25,25 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 	// 用 Go 的方式编码解码
 	return func(ctx *gin.Context) {
 		// 不需要登录校验的
+		flag := false
 		for _, path := range l.paths {
 			if ctx.Request.URL.Path == path {
-				return
+				flag = true
+				break
 			}
 		}
-		verifyToken(ctx)
+		if !flag {
+			token := ctx.GetHeader(config.HTTTP_HEADER_AUTH)
+			if token == "" {
+				ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+			}
+			claims, err := jwtoken.NewJWToken().ParesJWToken(token)
+			if err != nil {
+				ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+			}
+			ctx.Set(config.USER_ID, claims.UserId)
+		}
+		ctx.Next()
 	}
 }
 
