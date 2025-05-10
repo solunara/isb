@@ -3,6 +3,7 @@ module github.com/solunara/isb
 go 1.23.6
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/gin-contrib/cors v1.7.3

@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/types/app"
+	"github.com/solunara/isb/src/utils"
 	"gorm.io/gorm"
 )
 
@@ -37,9 +38,11 @@ func (xh *XytHospitalHandler) RegisterRoutes(group *gin.RouterGroup) {
 	ug.GET("/detail", xh.hosDetail)
 	ug.GET("/department", xh.hosDepartment)
 	ug.GET("/scheduler", xh.docSchedules)
-	ug.POST("/add/patient", xh.addPatient)
 	ug.GET("/patient/list", xh.getPatients)
 	ug.GET("/register/doctor", xh.getDoctor)
+	ug.POST("/add/order", xh.addOrder)
+	ug.GET("/order", xh.getOrder)
+	ug.POST("/cancel/order", xh.cancelOrder)
 }
 
 func (xh *XytHospitalHandler) hosList(ctx *gin.Context) {
@@ -155,7 +158,7 @@ func (xh *XytHospitalHandler) hosRegion(ctx *gin.Context) {
 		if err == nil {
 			cityName = unescapeCityName
 		}
-		err = xh.db.Table(xytmodel.TableCity).Where("city_name = ?", cityName).Take(&city).Error
+		err = xh.db.Table(xytmodel.TableCity).Where("name = ?", cityName).Take(&city).Error
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				ctx.JSON(200, app.ResponseErr(404, "请指定一个存在的城市名字"))
@@ -164,7 +167,7 @@ func (xh *XytHospitalHandler) hosRegion(ctx *gin.Context) {
 			ctx.JSON(200, app.ErrInternalServer)
 			return
 		}
-		city_code = city.CityCode
+		city_code = city.Code
 	}
 
 	var district []xytmodel.District
@@ -217,6 +220,7 @@ func (xh *XytHospitalHandler) hosDepartment(ctx *gin.Context) {
 
 type DocScheduler struct {
 	DocId       string `json:"docId"`
+	ScheId      string `json:"scheId"`
 	TimeSlot    string `json:"timeSlot"`
 	DoctorName  string `json:"doctorName"`
 	Rank        string `json:"rank"`
@@ -278,7 +282,7 @@ func (xh *XytHospitalHandler) docSchedules(ctx *gin.Context) {
 		ctx.JSON(200, app.ErrInternalServer)
 		return
 	}
-	fmt.Println("docs: ", docs)
+
 	if len(docs) <= 0 {
 		ctx.JSON(200, app.ResponseOK(ScheduleInfo{}))
 		return
@@ -295,7 +299,7 @@ func (xh *XytHospitalHandler) docSchedules(ctx *gin.Context) {
 	if pageSize > MaxSchedulerDays {
 		pageSize = MaxSchedulerDays
 	}
-	fmt.Println("pageNo: ", pageNo, "pageSize: ", pageSize)
+
 	offset := (pageNo - 1) * pageSize
 	if offset > int(MaxSchedulerDays) {
 		ctx.JSON(200, app.ErrOutOfRange)
@@ -322,6 +326,7 @@ func (xh *XytHospitalHandler) docSchedules(ctx *gin.Context) {
 		var result DeptSchedule
 		result, err = xh.getOrCreateDocScheduler(hosId, deptId, date, docs)
 		if err != nil {
+			fmt.Println("err: ", err)
 			ctx.JSON(200, app.ErrInternalServer)
 			return
 		}
@@ -354,6 +359,7 @@ func (xh *XytHospitalHandler) getOrCreateDocScheduler(hosId, deptId string, t ti
 				amount = 10
 			}
 			var sche = xytmodel.Schedule{
+				ScheId:      utils.GenerateUinqueID(),
 				DocId:       docs[i].Id,
 				HosID:       hosId,
 				DeptID:      deptId,
@@ -384,15 +390,21 @@ type AddPatientReq struct {
 	Sex      bool   `json:"sex"`
 }
 
-func (xh *XytHospitalHandler) addPatient(ctx *gin.Context) {
-	var req AddPatientReq
+type AddOrderReq struct {
+	PatientId string `json:"patientId"`
+	ScheId    string `json:"scheId"`
+}
+
+func (xh *XytHospitalHandler) addOrder(ctx *gin.Context) {
+	var req AddOrderReq
 	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(http.StatusOK, app.ErrBadRequest)
 		return
 	}
 
-	err := CreatePatient(xh.db, req)
+	orderId, err := CreateOrder(xh.db, req)
 	if err != nil {
+		fmt.Println(err)
 		if !errors.Is(err, app.ErrUserNotFound) {
 			ctx.JSON(http.StatusOK, app.ErrInternalServer)
 			return
@@ -401,7 +413,65 @@ func (xh *XytHospitalHandler) addPatient(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"orderId": orderId}))
+}
+
+func (xh *XytHospitalHandler) getOrder(ctx *gin.Context) {
+	orderId := ctx.Query("orderId")
+	if orderId == "" {
+		ctx.JSON(200, app.ErrBadRequestQuery)
+		return
+	}
+
+	var order xytmodel.RegisterOrder
+	err := xh.db.Table(xytmodel.TableOrder).Where("order_id = ?", orderId).Take(&order).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(200, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(200, app.ErrInternalServer)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, app.ResponseOK(order))
+}
+
+type cancelOrderReq struct {
+	OrderId string `json:"orderId"`
+}
+
+func (xh *XytHospitalHandler) cancelOrder(ctx *gin.Context) {
+	var req cancelOrderReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, app.ErrBadRequest)
+		return
+	}
+
+	var order xytmodel.RegisterOrder
+	err := xh.db.Table(xytmodel.TableOrder).Where("order_id = ?", req.OrderId).Take(&order).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(200, app.ErrNotFound)
+			return
+		}
+		ctx.JSON(200, app.ErrInternalServer)
+		return
+	}
+
+	switch order.State {
+	case 0:
+		err := xh.db.Table(xytmodel.TableOrder).Where("order_id = ?", req.OrderId).Update("state", -1).Error
+		if err != nil {
+			ctx.JSON(200, app.ErrInternalServer)
+			return
+		}
+		ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+	case 1, 2:
+		ctx.JSON(http.StatusOK, app.ResponseErr(403, "无法取消该订单"))
+	default:
+		ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+	}
 }
 
 func (xh *XytHospitalHandler) getPatients(ctx *gin.Context) {
@@ -427,11 +497,10 @@ type DocRegister struct {
 }
 
 func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
-	docId := ctx.Query("docId")
-	hosId := ctx.Query("hosId")
-	workDay := ctx.Query("workDay")
-	var doctor xytmodel.Doctor
-	err := xh.db.Table(xytmodel.TableDoctor).Where("id = ?", docId).Take(&doctor).Error
+	scheId := ctx.Query("scheId")
+
+	var schedule xytmodel.Schedule
+	err := xh.db.Table(xytmodel.TableSchedule).Where("sche_id = ?", scheId).Take(&schedule).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusOK, app.ErrNotFound)
@@ -441,8 +510,8 @@ func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
 		return
 	}
 
-	var schedule xytmodel.Schedule
-	err = xh.db.Table(xytmodel.TableSchedule).Where("doc_id = ? and hos_id = ? and work_date = ?", docId, hosId, workDay).Take(&schedule).Error
+	var doctor xytmodel.Doctor
+	err = xh.db.Table(xytmodel.TableDoctor).Where("id = ?", schedule.DocId).Take(&doctor).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusOK, app.ErrNotFound)
@@ -453,7 +522,7 @@ func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
 	}
 
 	var hos xytmodel.Hospital
-	err = xh.db.Table(xytmodel.TableHospital).Where("uid = ?", hosId).Take(&hos).Error
+	err = xh.db.Table(xytmodel.TableHospital).Where("uid = ?", schedule.HosID).Take(&hos).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusOK, app.ErrNotFound)
@@ -464,7 +533,7 @@ func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
 	}
 
 	var dept xytmodel.Department
-	err = xh.db.Table(xytmodel.TableDepartment).Where("uid = ? and hospital_id = ?", schedule.DeptID, hosId).Take(&dept).Error
+	err = xh.db.Table(xytmodel.TableDepartment).Where("uid = ? and hospital_id = ?", schedule.DeptID, schedule.HosID).Take(&dept).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusOK, app.ErrNotFound)
@@ -487,11 +556,11 @@ func (xh *XytHospitalHandler) getDoctor(ctx *gin.Context) {
 	}
 
 	var result = DocRegister{
-		DocId:      docId,
+		DocId:      schedule.DocId,
 		DoctorName: doctor.Name,
 		Rank:       doctor.Rank,
 		Profile:    doctor.Profile,
-		WorkDay:    workDay,
+		WorkDay:    schedule.WorkDate,
 		HosName:    hos.FullName,
 		DeptName:   dept.Name,
 		Amount:     amount,
@@ -508,6 +577,7 @@ func docSchedulerToView(sche []xytmodel.Schedule, docs []xytmodel.Doctor) DeptSc
 	for i := 0; i < len(sche); i++ {
 		result.DocScheduler = append(result.DocScheduler, DocScheduler{
 			DocId:       sche[i].DocId,
+			ScheId:      sche[i].ScheId,
 			TimeSlot:    sche[i].TimeSlot,
 			DoctorName:  docs[i].Name,
 			Rank:        docs[i].Rank,

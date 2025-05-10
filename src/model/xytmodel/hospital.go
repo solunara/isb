@@ -5,12 +5,11 @@ import "time"
 const (
 	TableHospital      = "hospital"
 	TableHospitalGrade = "hospital_grade"
-	TableCity          = "city"
-	TableDistrict      = "district"
 	TableDepartment    = "department"
 	TableSchedule      = "schedule"
 	TableDoctor        = "doctor"
 	TablePatient       = "patient"
+	TableOrder         = "register_order"
 )
 
 // 医院表
@@ -54,28 +53,6 @@ type HospitalGrade struct {
 	GradeName string `json:"grade_name" gorm:"column:grade_name;size:64;comment:医院等级名称"`
 }
 
-// 城市表
-type City struct {
-	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
-	CityName     string `json:"city_name" gorm:"column:city_name;type:varchar(100);not null;comment:城市名称"`
-	ProvinceName string `json:"province_name" gorm:"column:province_name;type:varchar(100);comment:省份名称"`
-	CityCode     string `json:"city_code" gorm:"column:city_code;size:6;comment:城市编码"`
-	ProvinceCode string `json:"province_code" gorm:"column:province_code;size:6;comment:省份编码"`
-	CreatedAt    int64
-	UpdatedAt    int64
-}
-
-// 区县表
-type District struct {
-	Id           uint   `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
-	DistrictName string `json:"district_name" gorm:"column:district_name;type:varchar(100);not null;comment:区名称"`
-	DistrictCode string `json:"district_code" gorm:"column:district_code;size:6;comment:区编码"`
-	CityCode     string `json:"city_code" gorm:"column:city_code;size:6;comment:城市编码"`
-	ProvinceCode string `json:"province_code" gorm:"column:province_code;size:6;comment:省份编码"`
-	CreatedAt    int64  `json:"created_at"`
-	UpdatedAt    int64  `json:"updated_at"`
-}
-
 // 科室表
 type Department struct {
 	UID         string `json:"uid" gorm:"column:uid;primaryKey;size:64;not null;comment:科室唯一编码"`
@@ -106,7 +83,7 @@ type Doctor struct {
 
 // 挂号类型表
 type RegistrationType struct {
-	ID          uint    `gorm:"primaryKey" json:"id"`
+	Id          uint    `gorm:"primaryKey;autoIncrement;" json:"id"`
 	Name        string  `gorm:"size:50;not null" json:"name"`
 	Fee         float64 `gorm:"type:decimal(10,2);default:0.00" json:"fee"`
 	Description string  `gorm:"type:text" json:"description"`
@@ -131,6 +108,7 @@ type Registration struct {
 // 排班表
 type Schedule struct {
 	Id          int    `gorm:"column:id;primaryKey" json:"id"`
+	ScheId      string `gorm:"column:sche_id;not null;size:24;" json:"scheId"`
 	DocId       string `gorm:"column:doc_id;not null;size:24;" json:"docId"`
 	HosID       string `gorm:"column:hos_id;size:24;" json:"hosId"`
 	DeptID      string `gorm:"column:dept_id;size:64;" json:"deptId"`
@@ -156,20 +134,33 @@ type Patient struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// 挂号订单表
+type RegisterOrder struct {
+	Id           int       `gorm:"column:id;primaryKey" json:"id"`
+	UserId       string    `gorm:"column:user_id;not null;size:64;unique;" json:"userId"`
+	OrderId      string    `gorm:"column:order_id;not null;size:64;unique;" json:"orderId"`
+	PatientId    string    `gorm:"column:patient_id;not null;size:64;" json:"patientId"`
+	HosID        string    `gorm:"column:hos_id;size:24;" json:"hosId"`
+	DeptID       string    `gorm:"column:dept_id;size:64;" json:"deptId"`
+	DocId        string    `gorm:"column:doc_id;not null;size:24;" json:"docId"`
+	HosName      string    `gorm:"column:hos_name;size:128;not null;" json:"hosName"`
+	DeptName     string    `gorm:"column:dept_name;size:32;not null;" json:"deptName"`
+	DocName      string    `gorm:"column:doc_name;size:24;not null;" json:"docName"`
+	PatientName  string    `gorm:"column:patient_name;size:24;not null;" json:"patientName"`
+	VisitTime    string    `gorm:"column:visit_time;not null;size:24;" json:"visitTime"`
+	Amount       int       `gorm:"column:amount;not null" json:"amount"`
+	State        int8      `gorm:"column:state;" json:"state"` // -1: 已取消  0: 待支付  1:已支付  2:已完成
+	RegisterTime string    `gorm:"column:register_time;not null;size:24;" json:"registerTime"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 func (Hospital) TableName() string {
 	return TableHospital
 }
 
 func (HospitalGrade) TableName() string {
 	return TableHospitalGrade
-}
-
-func (City) TableName() string {
-	return TableCity
-}
-
-func (District) TableName() string {
-	return TableDistrict
 }
 
 func (Department) TableName() string {
@@ -186,4 +177,8 @@ func (Doctor) TableName() string {
 
 func (Patient) TableName() string {
 	return TablePatient
+}
+
+func (RegisterOrder) TableName() string {
+	return TableOrder
 }
