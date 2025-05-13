@@ -395,7 +395,7 @@ func (xh *XytUserHandler) loginByPhone(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"name": xytuser.Name, "userId": xytuser.UserId, "token": tokenVal}))
+	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"name": xytuser.Name, "token": tokenVal}))
 }
 
 func (xh *XytUserHandler) wechatParam(ctx *gin.Context) {
@@ -536,6 +536,10 @@ func CreateOrder(db *gorm.DB, data AddOrderReq) (string, error) {
 		return "", err
 	}
 
+	if schedule.Registered+1 > schedule.MaxPatients {
+		return "", errors.New("已约满")
+	}
+
 	var hospital xytmodel.Hospital
 	err = db.Table(xytmodel.TableHospital).Where("uid = ?", schedule.HosID).Take(&hospital).Error
 	if err != nil {
@@ -557,6 +561,7 @@ func CreateOrder(db *gorm.DB, data AddOrderReq) (string, error) {
 	var xytorder = xytmodel.RegisterOrder{
 		UserId:       patient.UserId,
 		OrderId:      utils.GenerateUinqueID(),
+		ScheId:       data.ScheId,
 		PatientId:    data.PatientId,
 		HosID:        schedule.HosID,
 		DeptID:       schedule.DeptID,
@@ -573,11 +578,13 @@ func CreateOrder(db *gorm.DB, data AddOrderReq) (string, error) {
 
 	err = db.Table(xytmodel.TableOrder).Create(&xytorder).Error
 	if err != nil {
-		if !errors.Is(err, gorm.ErrDuplicatedKey) {
-			return "", err
-		}
-		xytorder.OrderId = utils.GenerateUinqueID()
-		return xytorder.OrderId, db.Table(xytmodel.TableOrder).Create(&xytorder).Error
+		return "", err
 	}
+
+	err = db.Table(xytmodel.TableSchedule).Where("sche_id = ?", schedule.ScheId).Update("registered", schedule.Registered+1).Error
+	if err != nil {
+		return xytorder.OrderId, err
+	}
+
 	return xytorder.OrderId, nil
 }

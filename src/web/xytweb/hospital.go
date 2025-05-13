@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/solunara/isb/src/config"
 	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/types/app"
 	"github.com/solunara/isb/src/utils"
@@ -20,7 +21,7 @@ type XytHospitalHandler struct {
 	db *gorm.DB
 }
 
-const MaxRegistrationDays = 7
+const MaxPatientsPerDay = 10
 const MaxSchedulerDays = 7
 
 func NewXytHospitalHandler(db *gorm.DB) *XytHospitalHandler {
@@ -38,11 +39,11 @@ func (xh *XytHospitalHandler) RegisterRoutes(group *gin.RouterGroup) {
 	ug.GET("/detail", xh.hosDetail)
 	ug.GET("/department", xh.hosDepartment)
 	ug.GET("/scheduler", xh.docSchedules)
-	ug.GET("/patient/list", xh.getPatients)
 	ug.GET("/register/doctor", xh.getDoctor)
 	ug.POST("/add/order", xh.addOrder)
 	ug.GET("/order", xh.getOrder)
 	ug.POST("/cancel/order", xh.cancelOrder)
+	ug.GET("/order/list", xh.listOrder)
 }
 
 func (xh *XytHospitalHandler) hosList(ctx *gin.Context) {
@@ -381,7 +382,7 @@ func (xh *XytHospitalHandler) getOrCreateDocScheduler(hosId, deptId string, t ti
 				WorkWeek:    int(t.Weekday()),
 				TimeSlot:    randomTimeSlot(),
 				Amount:      amount,
-				MaxPatients: 10,
+				MaxPatients: MaxPatientsPerDay,
 				Registered:  0,
 			}
 			err = xh.db.Model(&xytmodel.Schedule{}).Create(&sche).Error
@@ -451,6 +452,74 @@ func (xh *XytHospitalHandler) getOrder(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, app.ResponseOK(order))
 }
 
+func (xh *XytHospitalHandler) listOrder(ctx *gin.Context) {
+	userid, ok := ctx.Get(config.USER_ID)
+	if !ok {
+		ctx.JSON(http.StatusOK, app.ErrUnauthorized)
+		return
+	}
+	queries := ctx.Request.URL.Query()
+	dbQuery := xh.db.Model(&xytmodel.RegisterOrder{})
+	for k, v := range queries {
+		switch k {
+		case "patient_id":
+			if len(v) > 0 && v[0] != "" {
+				dbQuery.Where("patient_id = ?", v[0])
+			}
+		case "state":
+			if len(v) > 0 && v[0] != "" {
+				st, err := strconv.Atoi(v[0])
+				if err == nil {
+					if st >= -1 && st <= 2 {
+						dbQuery.Where("state = ?", v[0])
+					}
+				}
+			}
+		case "pageNo", "pageSize", "timeStamp":
+			continue
+		}
+	}
+	dbQuery.Where("user_id = ?", userid.(string))
+
+	pageNo, _ := strconv.Atoi(ctx.DefaultQuery("pageNo", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("pageSize", "1"))
+	if pageNo < 1 {
+		pageNo = 1
+	}
+	if pageSize < 1 {
+		pageSize = 1
+	}
+	if pageSize > 30 {
+		pageSize = 30
+	}
+	offset := (pageNo - 1) * pageSize
+	var total int64
+	err := dbQuery.Count(&total).Error
+	if err != nil {
+		ctx.JSON(200, app.ErrInternalServer)
+		return
+	}
+
+	if offset > int(total) {
+		ctx.JSON(200, app.ErrOutOfRange)
+		return
+	}
+
+	if total < 1 {
+		ctx.JSON(http.StatusOK, app.ResponsePageData(0, nil))
+		return
+	}
+
+	var orderList []xytmodel.RegisterOrder
+	err = dbQuery.Find(&orderList).Error
+	if err != nil {
+		ctx.JSON(200, app.ErrInternalServer)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, app.ResponsePageData(total, orderList))
+}
+
 type cancelOrderReq struct {
 	OrderId string `json:"orderId"`
 }
@@ -473,9 +542,24 @@ func (xh *XytHospitalHandler) cancelOrder(ctx *gin.Context) {
 		return
 	}
 
+	var sche xytmodel.Schedule
+	err = xh.db.Table(xytmodel.TableSchedule).Where("sche_id = ?", order.ScheId).Take(&sche).Error
+	if err != nil {
+		ctx.JSON(200, app.ErrNotFound)
+		return
+	}
+
 	switch order.State {
 	case 0:
-		err := xh.db.Table(xytmodel.TableOrder).Where("order_id = ?", req.OrderId).Update("state", -1).Error
+		err = xh.db.Table(xytmodel.TableOrder).Where("order_id = ?", req.OrderId).Update("state", -1).Error
+		if err != nil {
+			ctx.JSON(200, app.ErrInternalServer)
+			return
+		}
+		if sche.Registered > 0 {
+			sche.Registered = sche.Registered - 1
+		}
+		err = xh.db.Model(&sche).Update("registered", sche.Registered).Error
 		if err != nil {
 			ctx.JSON(200, app.ErrInternalServer)
 			return
@@ -486,17 +570,6 @@ func (xh *XytHospitalHandler) cancelOrder(ctx *gin.Context) {
 	default:
 		ctx.JSON(http.StatusOK, app.ResponseOK(nil))
 	}
-}
-
-func (xh *XytHospitalHandler) getPatients(ctx *gin.Context) {
-	userId := ctx.Query("userId")
-	var patients []xytmodel.Patient
-	err := xh.db.Table(xytmodel.TablePatient).Where("user_id = ?", userId).Find(&patients).Error
-	if err != nil {
-		ctx.JSON(http.StatusOK, app.ErrInternalServer)
-		return
-	}
-	ctx.JSON(http.StatusOK, app.ResponseOK(patients))
 }
 
 type DocRegister struct {
