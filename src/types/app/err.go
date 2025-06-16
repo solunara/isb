@@ -49,6 +49,12 @@ var (
 		Data: nil,
 	}
 
+	ErrEmptyRequest = &ResponseType{
+		Code: ErrCodeBadRequest,
+		Msg:  "请求数据为空",
+		Data: nil,
+	}
+
 	ErrBadRequestQuery = &ResponseType{
 		Code: ErrCodeBadRequest,
 		Msg:  ErrMissingData,

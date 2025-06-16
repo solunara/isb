@@ -13,6 +13,7 @@ import (
 	sessionsredis "github.com/gin-contrib/sessions/redis"
 	"github.com/solunara/isb/src/config"
 	"github.com/solunara/isb/src/model"
+	"github.com/solunara/isb/src/model/hllmodel"
 	"github.com/solunara/isb/src/model/xytmodel"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/repository/cache"
@@ -20,6 +21,7 @@ import (
 	"github.com/solunara/isb/src/service"
 	"github.com/solunara/isb/src/types/logger"
 	"github.com/solunara/isb/src/web"
+	"github.com/solunara/isb/src/web/hllweb"
 	"github.com/solunara/isb/src/web/middleware"
 	"github.com/solunara/isb/src/web/xytweb"
 	"go.uber.org/zap"
@@ -151,6 +153,7 @@ func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 			IgnorePaths("/xyt/hos/region").
 			IgnorePaths("/xyt/hos/detail").
 			IgnorePaths("/xyt/hos/department").
+			IgnorePaths("/hll/user/login").
 			Build(),
 		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
 	}
@@ -222,6 +225,12 @@ func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 
 	xytCityCtrl := xytweb.NewXytCiteslHandler(db)
 	xytCityCtrl.RegisterRoutes(xytGroup)
+
+	// hll api
+	hllGroup := ginEngine.Group("/hll")
+
+	hllUserCtrl := hllweb.NewHllUserlHandler(cace, db)
+	hllUserCtrl.RegisterRoutes(hllGroup)
 }
 
 func autoCreateTable(db *gorm.DB) error {
@@ -248,6 +257,10 @@ func autoCreateTable(db *gorm.DB) error {
 
 		// 用户表
 		&xytmodel.XytUser{},
+
+		/* ---------------- hllmgr --------------- */
+		// 用户表
+		&hllmodel.HllUser{},
 	)
 }
 

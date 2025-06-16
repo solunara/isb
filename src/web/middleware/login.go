@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/solunara/isb/src/config"
 	"github.com/solunara/isb/src/types/app"
@@ -36,11 +38,15 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			token := ctx.GetHeader(config.HTTTP_HEADER_AUTH)
 			if token == "" {
 				ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+				return
 			}
+			fmt.Println("token: ", token)
 			claims, err := jwtoken.NewJWToken().ParesJWToken(token)
-			if err != nil {
+			if err != nil || claims == nil {
 				ctx.AbortWithStatusJSON(200, app.ErrForbidden)
+				return
 			}
+			fmt.Println("token id: ", claims.UserId)
 			ctx.Set(config.USER_ID, claims.UserId)
 		}
 		ctx.Next()
