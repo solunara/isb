@@ -1,14 +1,16 @@
 package web
 
 import (
+	"net/http"
+	"time"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/service"
 	"github.com/solunara/isb/src/types/app"
-	"net/http"
-	"time"
+	"github.com/solunara/isb/src/types/jwtoken"
 )
 
 const (
@@ -19,6 +21,7 @@ const (
 type UserHandler struct {
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
+	codeSvc        service.CaptchaService
 	usersvc        service.UserService
 }
 
@@ -40,7 +43,11 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	// ---------------- vbook api ---------------------
 	ug := server.Group("/user")
 	ug.POST("/signup", h.SignUp)
-	ug.POST("/login", h.LoginWithEmail)
+	ug.POST("/login/email", h.LoginWithEmail)
+
+	ug.POST("/login/sms/send", h.LoginSMSSend)
+	ug.POST("/login/sms", h.LoginSMS)
+
 	ug.POST("/edit", h.Edit)
 	ug.GET("/profile", h.Profile)
 }
@@ -113,7 +120,6 @@ func (h *UserHandler) LoginWithEmail(ctx *gin.Context) {
 	u, err := h.usersvc.LoginWithEmailPwd(ctx, req.Email, req.Password)
 	switch err {
 	case nil:
-
 		sess := sessions.Default(ctx)
 		sess.Set("userId", u.Id)
 		sess.Options(sessions.Options{
@@ -133,6 +139,72 @@ func (h *UserHandler) LoginWithEmail(ctx *gin.Context) {
 	default:
 		ctx.JSON(http.StatusOK, app.ErrInternalServer)
 	}
+}
+
+func (h *UserHandler) LoginSMSSend(ctx *gin.Context) {
+	type LoginSMSSendCodeReq struct {
+		Phone string `json:"phone"`
+	}
+
+	var req LoginSMSSendCodeReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, app.ErrBadRequest)
+		return
+	}
+
+	if req.Phone == "" {
+		ctx.JSON(http.StatusOK, app.ErrEmptyRequest)
+		return
+	}
+
+	err := h.codeSvc.Send(ctx, biz_login, req.Phone)
+	switch err {
+	case nil:
+		ctx.JSON(http.StatusOK, app.ResponseOK(nil))
+	case service.ErrSentCaptchaTooOften:
+		ctx.JSON(http.StatusOK, app.ResponseErr(400, "sent too often"))
+	default:
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+	}
+}
+
+func (u *UserHandler) LoginSMS(ctx *gin.Context) {
+	type LoginSMSVerifyCodeReq struct {
+		Phone   string `json:"phone"`
+		Captcha string `json:"captcha"`
+	}
+
+	var req LoginSMSVerifyCodeReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, app.ErrBadRequest)
+		return
+	}
+
+	ok, err := u.codeSvc.Verify(ctx, biz_login, req.Phone, req.Captcha)
+	if err != nil {
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+	if !ok {
+		ctx.JSON(http.StatusOK, app.ErrBadPhoneOrCode)
+		return
+	}
+
+	user, err := u.usersvc.FindOrCreate(ctx, req.Phone)
+	if err != nil {
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	tokenVal, err := jwtoken.NewJWToken().CreateJWToken(jwtoken.CustomClaims{
+		Name: user.Nickname,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, app.ErrInternalServer)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, app.ResponseOK(map[string]string{"name": user.Nickname, "token": tokenVal}))
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
