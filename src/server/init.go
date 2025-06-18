@@ -19,6 +19,7 @@ import (
 	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/repository/dao"
 	"github.com/solunara/isb/src/service"
+	"github.com/solunara/isb/src/service/sms/localsms"
 	"github.com/solunara/isb/src/types/logger"
 	"github.com/solunara/isb/src/web"
 	"github.com/solunara/isb/src/web/hllweb"
@@ -201,10 +202,14 @@ func (g gormLoggerFunc) Printf(msg string, args ...any) {
 func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	// vbook-api
 	userCache := cache.NewUserCache(cace)
+	codeCache := cache.NewCaptchaCache(cace)
 	userDao := dao.NewUserDAO(db)
 	userRepo := repository.NewUserRepository(userDao, userCache)
+	codeRepo := repository.NewCaptchaRepository(codeCache)
 	userSrv := service.NewUserService(userRepo)
-	userCtrl := web.NewUserHandler(userSrv)
+	smsSvc := localsms.NewService()
+	codeSvc := service.NewCaptchaService(codeRepo, smsSvc, "000000")
+	userCtrl := web.NewUserHandler(userSrv, codeSvc)
 	userCtrl.RegisterRoutes(ginEngine)
 
 	// ms-api

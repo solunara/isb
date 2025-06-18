@@ -25,7 +25,7 @@ type UserHandler struct {
 	usersvc        service.UserService
 }
 
-func NewUserHandler(usersvc service.UserService) *UserHandler {
+func NewUserHandler(usersvc service.UserService, codeSvc service.CaptchaService) *UserHandler {
 	const (
 		// 邮箱格式校验
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
