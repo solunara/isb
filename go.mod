@@ -3,6 +3,7 @@ module github.com/solunara/isb
 go 1.23.6
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.1.7
 	github.com/alibabacloud-go/dysmsapi-20170525/v4 v4.1.3
 	github.com/alibabacloud-go/tea v1.3.9
@@ -16,7 +17,6 @@ require (
 	github.com/gin-contrib/sessions v1.0.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.7.0
-	github.com/golang/mock v1.1.1
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.7.1
