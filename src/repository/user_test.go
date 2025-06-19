@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -206,10 +205,6 @@ func TestCachedUserRepository_FindById(t *testing.T) {
 			uc, ud := tc.mock(ctrl)
 			rp := NewUserRepository(ud, uc)
 			user, err := rp.FindById(tc.ctx, tc.uid)
-			fmt.Println("err: ", err)
-			fmt.Println("wanterr: ", tc.wantErr)
-			fmt.Println("user: ", user)
-			fmt.Println("wantuser: ", tc.wantUser)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantUser, user)
 		})
