@@ -13,7 +13,7 @@ const (
 
 // dao err
 var (
-	ErrDuplicateEmail = errors.New("email address conflict")
+	ErrDuplicateEmail = errors.New("邮箱冲突")
 	ErrRecordNotFound = gorm.ErrRecordNotFound
 	ErrDuplicateUser  = gorm.ErrDuplicatedKey
 )
