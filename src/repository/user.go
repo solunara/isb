@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"github.com/solunara/isb/src/types/app"
 	"log"
 	"time"
+
+	"github.com/solunara/isb/src/types/app"
 
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/repository/cache"
@@ -70,7 +70,6 @@ func (repo *CachedUserRepository) FindById(ctx context.Context, uid int64) (User
 
 func (repo *CachedUserRepository) FindByEmail(ctx context.Context, email string) (User, error) {
 	modelUser, err := repo.dao.FindByEmail(ctx, email)
-	fmt.Println(err)
 	if err != nil {
 		return User{}, err
 	}
