@@ -1,10 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -43,10 +43,18 @@ var configFile *string
 func init() {
 	configFile = flag.String("c", "", "Path to the config file")
 	flag.StringVar(configFile, "config", *configFile, "Path to the config file")
-	flag.Parse()
+	//flag.Parse()
 }
 
-func initConfig() error {
+func InitConfig(data []byte) error {
+	if data != nil {
+		viper.SetConfigType("yaml")
+		err := viper.ReadConfig(bytes.NewReader(data))
+		if err == nil {
+			return nil
+		}
+	}
+
 	// first config is command parameter
 	if configFile != nil && *configFile != "" {
 		viper.AddConfigPath(*configFile)
@@ -73,7 +81,7 @@ func initConfig() error {
 	return viper.ReadRemoteConfig()
 }
 
-func initLogger() logger.Logger {
+func InitLogger() logger.Logger {
 	l, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
@@ -81,8 +89,7 @@ func initLogger() logger.Logger {
 	return logger.NewZapLogger(l)
 }
 
-func initDB(l logger.Logger) (*gorm.DB, error) {
-	fmt.Println(viper.GetInt64("mysql.slow_time"))
+func InitDB(l logger.Logger) (*gorm.DB, error) {
 	gorm_mysql, err := gorm.Open(
 		mysql.Open(viper.GetString("mysql.dsn")),
 		&gorm.Config{
@@ -122,7 +129,7 @@ func initDB(l logger.Logger) (*gorm.DB, error) {
 	return gorm_mysql, nil
 }
 
-func initRedis() (redis.Cmdable, error) {
+func InitRedis() (redis.Cmdable, error) {
 	redisCli := redis.NewClient(&redis.Options{
 		Addr:     viper.GetString("redis.addr"),
 		Password: viper.GetString("redis.password"),
@@ -131,7 +138,7 @@ func initRedis() (redis.Cmdable, error) {
 	return redisCli, redisCli.Ping(context.Background()).Err()
 }
 
-func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger.Logger) []gin.HandlerFunc {
+func InitMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger.Logger) []gin.HandlerFunc {
 	bd := middleware.NewBuilder(func(ctx context.Context, al *middleware.AccessLog) {
 		l.Debug("HTTP请求", logger.Field{Key: "al", Val: al})
 	}).AllowReqBody(true).AllowRespBody()
@@ -145,8 +152,10 @@ func initMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 		bd.Build(),
 		sessions.Sessions("mysession", store),
 		middleware.NewLoginJWTMiddlewareBuilder().
-			IgnorePaths("/users/signup").
-			IgnorePaths("/users/login").
+			IgnorePaths("/user/signup").
+			IgnorePaths("/user/login/email").
+			IgnorePaths("/user/login/sms").
+			IgnorePaths("/user/login/sms/send").
 			IgnorePaths("/xyt/user/phone/code").
 			IgnorePaths("/xyt/user/login/phone").
 			IgnorePaths("/xyt/hos/list").
@@ -187,7 +196,7 @@ func corsHdl() gin.HandlerFunc {
 	// })
 }
 
-func initGinServer(mdls []gin.HandlerFunc) *gin.Engine {
+func InitGinServer(mdls []gin.HandlerFunc) *gin.Engine {
 	ginsrv := gin.Default()
 	ginsrv.Use(mdls...)
 	return ginsrv
@@ -199,7 +208,7 @@ func (g gormLoggerFunc) Printf(msg string, args ...any) {
 	g(msg, logger.Field{Key: msg, Val: args})
 }
 
-func initRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
+func InitRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	// vbook-api
 	userCache := cache.NewUserCache(cace)
 	codeCache := cache.NewCaptchaCache(cace)

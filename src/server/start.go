@@ -11,14 +11,14 @@ import (
 )
 
 func Start() {
-	err := initConfig()
+	err := InitConfig(nil)
 	if err != nil {
 		log.Printf("[Err] init config: %v", err)
 		log.Printf("[Warn] start by default...")
 		StartDefault()
 	}
 
-	dbCli, err := initDB(initLogger())
+	dbCli, err := InitDB(InitLogger())
 	if err != nil {
 		log.Printf("[Err] init db client: %v", err)
 		return
@@ -30,7 +30,7 @@ func Start() {
 		return
 	}
 
-	redisCli, err := initRedis()
+	redisCli, err := InitRedis()
 	if err != nil {
 		log.Printf("[Err] init redis client: %v", err)
 		return
@@ -45,9 +45,9 @@ func Start() {
 		return
 	}
 
-	ginServer := initGinServer(initMiddlewares(redisCli, store, initLogger()))
+	ginServer := InitGinServer(InitMiddlewares(redisCli, store, InitLogger()))
 
-	initRouters(ginServer, dbCli, redisCli)
+	InitRouters(ginServer, dbCli, redisCli)
 
 	if err := ginServer.Run(fmt.Sprintf(":%v", viper.GetInt("http.port"))); err != nil {
 		log.Fatal(err)

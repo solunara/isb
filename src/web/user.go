@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/solunara/isb/src/repository"
+	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/service"
 	"github.com/solunara/isb/src/types/app"
 	"github.com/solunara/isb/src/types/jwtoken"
@@ -32,10 +34,12 @@ func NewUserHandler(usersvc service.UserService, codeSvc service.CaptchaService)
 		// 密码格式校验
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 	)
+	fmt.Println("=======")
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		usersvc:        usersvc,
+		codeSvc:        codeSvc,
 	}
 }
 
@@ -161,7 +165,7 @@ func (h *UserHandler) LoginSMSSend(ctx *gin.Context) {
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, app.ResponseOK(nil))
-	case service.ErrSentCaptchaTooOften:
+	case cache.ErrSendTooFrequently:
 		ctx.JSON(http.StatusOK, app.ResponseErr(400, "sent too often"))
 	default:
 		ctx.JSON(http.StatusOK, app.ErrInternalServer)

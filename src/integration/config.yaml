@@ -1,0 +1,23 @@
+app:
+  node_id: 1
+
+http:
+  port: 8080
+  write_timeout: 30 # Second unit
+  read_timeout: 30 # Second unit
+
+mysql:
+  dsn: "root:root@tcp(192.168.110.249:13316)/isb?charset=utf8mb4&parseTime=true"
+  slow_log: slow.log
+  slow_time: 300 # Millisecond unit
+  max_idle_conn: 16
+  max_open_conn: 100
+
+postgres:
+
+redis:
+  addr: "192.168.110.249:6379"
+  password: ""
+  db: 0
+
+email:

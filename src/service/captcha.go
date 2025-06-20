@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrSentCaptchaTooOften = errors.New("Send captcha too often")
+	ErrSentCaptchaTooOften = errors.New("send too frequently")
 )
 
 var captchaTplId = "186224"
