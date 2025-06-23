@@ -3,10 +3,11 @@ package middleware
 import (
 	"bytes"
 	"context"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/atomic"
 	"io"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/atomic"
 )
 
 // MiddlewareBuilder 注意点：
@@ -19,7 +20,7 @@ type MiddlewareBuilder struct {
 	loggerFunc    func(ctx context.Context, al *AccessLog)
 }
 
-func NewBuilder(fn func(ctx context.Context, al *AccessLog)) *MiddlewareBuilder {
+func NewLogBuilder(fn func(ctx context.Context, al *AccessLog)) *MiddlewareBuilder {
 	return &MiddlewareBuilder{
 		loggerFunc:   fn,
 		allowReqBody: atomic.NewBool(false),

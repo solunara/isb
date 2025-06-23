@@ -15,11 +15,13 @@ import (
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/model/hllmodel"
 	"github.com/solunara/isb/src/model/xytmodel"
+	"github.com/solunara/isb/src/pkg/ratelimit"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/repository/dao"
 	"github.com/solunara/isb/src/service"
 	"github.com/solunara/isb/src/service/sms/localsms"
+	"github.com/solunara/isb/src/service/sms/ratelimitSms"
 	"github.com/solunara/isb/src/types/logger"
 	"github.com/solunara/isb/src/web"
 	"github.com/solunara/isb/src/web/hllweb"
@@ -43,7 +45,7 @@ var configFile *string
 func init() {
 	configFile = flag.String("c", "", "Path to the config file")
 	flag.StringVar(configFile, "config", *configFile, "Path to the config file")
-	//flag.Parse()
+	flag.Parse()
 }
 
 func InitConfig(data []byte) error {
@@ -139,7 +141,7 @@ func InitRedis() (redis.Cmdable, error) {
 }
 
 func InitMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger.Logger) []gin.HandlerFunc {
-	bd := middleware.NewBuilder(func(ctx context.Context, al *middleware.AccessLog) {
+	bd := middleware.NewLogBuilder(func(ctx context.Context, al *middleware.AccessLog) {
 		l.Debug("HTTP请求", logger.Field{Key: "al", Val: al})
 	}).AllowReqBody(true).AllowRespBody()
 	//viper.OnConfigChange(func(in fsnotify.Event) {
@@ -216,8 +218,9 @@ func InitRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	userRepo := repository.NewUserRepository(userDao, userCache)
 	codeRepo := repository.NewCaptchaRepository(codeCache)
 	userSrv := service.NewUserService(userRepo)
-	smsSvc := localsms.NewService()
-	codeSvc := service.NewCaptchaService(codeRepo, smsSvc, "000000")
+	//smsSvc := localsms.NewService()
+	ratelimitSmsSvc := ratelimitSms.NewRateLimitSMSService(localsms.NewService(), ratelimit.NewRedisSlideWindowLimit(cace, time.Second, 1000))
+	codeSvc := service.NewCaptchaService(codeRepo, ratelimitSmsSvc, "000000")
 	userCtrl := web.NewUserHandler(userSrv, codeSvc)
 	userCtrl.RegisterRoutes(ginEngine)
 
