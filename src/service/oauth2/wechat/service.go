@@ -11,7 +11,7 @@ import (
 	"github.com/solunara/isb/src/model"
 )
 
-var redirectURI = url.PathEscape("https://meoying.com/oauth2/wechat/callback")
+var redirectURI = url.PathEscape("http://127.0.0.1:8080/oauth2/wechat/callback")
 
 type Service interface {
 	AuthURL(ctx context.Context) (string, error)
@@ -24,7 +24,7 @@ type service struct {
 	client    *http.Client
 }
 
-func NewService(appId string, appSecret string, client *http.Client) Service {
+func NewOauth2WechatService(appId string, appSecret string, client *http.Client) Service {
 	return &service{
 		appId:     appId,
 		appSecret: appSecret,

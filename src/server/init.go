@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/solunara/isb/src/repository/cache"
 	"github.com/solunara/isb/src/repository/dao"
 	"github.com/solunara/isb/src/service"
+	"github.com/solunara/isb/src/service/oauth2/wechat"
 	"github.com/solunara/isb/src/service/sms/localsms"
 	"github.com/solunara/isb/src/service/sms/ratelimitSms"
 	"github.com/solunara/isb/src/types/logger"
@@ -156,6 +158,8 @@ func InitMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 		middleware.NewLoginJWTMiddlewareBuilder().
 			IgnorePaths("/user/signup").
 			IgnorePaths("/user/login/email").
+			IgnorePaths("/user/oauth2/wechat/authurl").
+			IgnorePaths("/user/oauth2/wechat/callback").
 			IgnorePaths("/user/login/sms").
 			IgnorePaths("/user/login/sms/send").
 			IgnorePaths("/xyt/user/phone/code").
@@ -210,6 +214,18 @@ func (g gormLoggerFunc) Printf(msg string, args ...any) {
 	g(msg, logger.Field{Key: msg, Val: args})
 }
 
+func InitWechatService() wechat.Service {
+	appId, ok := os.LookupEnv("WECHAT_APP_ID")
+	if !ok {
+		panic("没有找到环境变量 WECHAT_APP_ID ")
+	}
+	appKey, ok := os.LookupEnv("WECHAT_APP_SECRET")
+	if !ok {
+		panic("没有找到环境变量 WECHAT_APP_SECRET")
+	}
+	return wechat.NewOauth2WechatService(appId, appKey, http.DefaultClient)
+}
+
 func InitRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	// vbook-api
 	userCache := cache.NewUserCache(cace)
@@ -223,6 +239,10 @@ func InitRouters(ginEngine *gin.Engine, db *gorm.DB, cace redis.Cmdable) {
 	codeSvc := service.NewCaptchaService(codeRepo, ratelimitSmsSvc, "000000")
 	userCtrl := web.NewUserHandler(userSrv, codeSvc)
 	userCtrl.RegisterRoutes(ginEngine)
+
+	wechatSvc := InitWechatService()
+	oauth2WechatCtrl := web.NewOAuth2WechatHandler(wechatSvc, userSrv)
+	oauth2WechatCtrl.RegisterRoutes(ginEngine)
 
 	// ms-api
 	msGroup := ginEngine.Group("/ms")

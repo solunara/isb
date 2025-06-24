@@ -2,9 +2,10 @@ package dao
 
 import (
 	"context"
+	"time"
+
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/types/app"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
@@ -15,6 +16,7 @@ type UserDAO interface {
 	FindById(ctx context.Context, uid int64) (model.User, error)
 	FindByEmail(ctx context.Context, email string) (model.User, error)
 	FindByPhone(ctx context.Context, phone string) (model.User, error)
+	FindByWechat(ctx context.Context, openID string) (model.User, error)
 	UpdateUser(ctx context.Context, u model.User) (model.User, error)
 }
 
@@ -59,6 +61,12 @@ func (dao *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (model.Us
 	var res model.User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&res).Error
 	return res, err
+}
+
+func (dao *GORMUserDAO) FindByWechat(ctx context.Context, openID string) (model.User, error) {
+	var u model.User
+	err := dao.db.WithContext(ctx).Where("wechat_open_id = ?", openID).First(&u).Error
+	return u, err
 }
 
 func (dao *GORMUserDAO) UpdateUser(ctx context.Context, u model.User) (model.User, error) {

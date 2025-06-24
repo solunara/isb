@@ -18,6 +18,7 @@ type UserRepository interface {
 	FindById(ctx context.Context, uid int64) (User, error)
 	FindByEmail(ctx context.Context, email string) (User, error)
 	FindByPhone(ctx context.Context, phone string) (User, error)
+	FindByWechat(ctx context.Context, openID string) (User, error)
 	EditProfile(ctx context.Context, u User) (User, error)
 }
 
@@ -84,6 +85,14 @@ func (repo *CachedUserRepository) FindByPhone(ctx context.Context, phone string)
 	return repo.toView(modelUser), nil
 }
 
+func (r *CachedUserRepository) FindByWechat(ctx context.Context, openID string) (User, error) {
+	u, err := r.dao.FindByWechat(ctx, openID)
+	if err != nil {
+		return User{}, err
+	}
+	return r.toView(u), nil
+}
+
 func (repo *CachedUserRepository) EditProfile(ctx context.Context, u User) (User, error) {
 	modelUser, err := repo.dao.UpdateUser(ctx, repo.toModel(u))
 	if err != nil {
@@ -123,9 +132,10 @@ func (repo *CachedUserRepository) toModel(u User) model.User {
 }
 
 type User struct {
-	Id    int64
-	Phone string
-	Email string
+	Id          int64
+	WechaOpenId string
+	Phone       string
+	Email       string
 
 	// encrypted password
 	Password string

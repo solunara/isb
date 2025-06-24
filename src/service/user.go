@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
+	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/types/app"
 	"golang.org/x/crypto/bcrypt"
@@ -12,6 +14,7 @@ type UserService interface {
 	Signup(ctx context.Context, u repository.User) error
 	LoginWithEmailPwd(ctx context.Context, email string, password string) (repository.User, error)
 	FindOrCreate(ctx context.Context, phone string) (repository.User, error)
+	FindOrCreateByWechat(ctx context.Context, wechatInfo model.WechatInfo) (repository.User, error)
 	EditProfile(ctx context.Context, u repository.User) (repository.User, error)
 }
 
@@ -72,6 +75,22 @@ func (svc *userService) FindOrCreate(ctx context.Context, phone string) (reposit
 	default:
 		return repository.User{}, err
 	}
+}
+
+func (svc *userService) FindOrCreateByWechat(ctx context.Context, info model.WechatInfo) (repository.User, error) {
+	u, err := svc.repo.FindByWechat(ctx, info.OpenID)
+	if err != app.ErrRecordNotFound {
+		return u, err
+	}
+	u = repository.User{
+		WechaOpenId: info.OpenID,
+	}
+	err = svc.repo.Create(ctx, u)
+	if err != nil && !errors.Is(err, app.ErrDuplicateUser) {
+		return u, err
+	}
+	// 因为这里会遇到主从延迟的问题
+	return svc.repo.FindByWechat(ctx, info.OpenID)
 }
 
 func (svc *userService) EditProfile(ctx context.Context, u repository.User) (repository.User, error) {

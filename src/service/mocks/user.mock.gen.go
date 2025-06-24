@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	model "github.com/solunara/isb/src/model"
 	repository "github.com/solunara/isb/src/repository"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -68,6 +69,21 @@ func (m *MockUserService) FindOrCreate(ctx context.Context, phone string) (repos
 func (mr *MockUserServiceMockRecorder) FindOrCreate(ctx, phone any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOrCreate", reflect.TypeOf((*MockUserService)(nil).FindOrCreate), ctx, phone)
+}
+
+// FindOrCreateByWechat mocks base method.
+func (m *MockUserService) FindOrCreateByWechat(ctx context.Context, wechatInfo model.WechatInfo) (repository.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindOrCreateByWechat", ctx, wechatInfo)
+	ret0, _ := ret[0].(repository.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindOrCreateByWechat indicates an expected call of FindOrCreateByWechat.
+func (mr *MockUserServiceMockRecorder) FindOrCreateByWechat(ctx, wechatInfo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOrCreateByWechat", reflect.TypeOf((*MockUserService)(nil).FindOrCreateByWechat), ctx, wechatInfo)
 }
 
 // LoginWithEmailPwd mocks base method.
