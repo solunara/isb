@@ -7,15 +7,14 @@ import (
 	"net/http"
 	"net/url"
 
-	uuid "github.com/lithammer/shortuuid/v4"
 	"github.com/solunara/isb/src/model"
 )
 
 var redirectURI = url.PathEscape("http://127.0.0.1:8080/oauth2/wechat/callback")
 
 type Service interface {
-	AuthURL(ctx context.Context) (string, error)
-	VerifyCode(ctx context.Context, code string, state string) (model.WechatInfo, error)
+	AuthURL(ctx context.Context, state string) (string, error)
+	VerifyCode(ctx context.Context, code string) (model.WechatInfo, error)
 }
 
 type service struct {
@@ -32,7 +31,7 @@ func NewOauth2WechatService(appId string, appSecret string, client *http.Client)
 	}
 }
 
-func (s *service) VerifyCode(ctx context.Context, code string, state string) (model.WechatInfo, error) {
+func (s *service) VerifyCode(ctx context.Context, code string) (model.WechatInfo, error) {
 	const targetPattern = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code"
 	target := fmt.Sprintf(targetPattern, s.appId, s.appSecret, code)
 	//resp, err := http.Get(target)
@@ -73,9 +72,8 @@ func (s *service) VerifyCode(ctx context.Context, code string, state string) (mo
 	}, nil
 }
 
-func (s *service) AuthURL(ctx context.Context) (string, error) {
+func (s *service) AuthURL(ctx context.Context, state string) (string, error) {
 	const urlPattern = "https://open.weixin.qq.com/connect/qrconnect?appid=%s&redirect_uri=%s&response_type=code&scope=snsapi_login&state=%s#wechat_redirect"
-	state := uuid.New()
 	return fmt.Sprintf(urlPattern, s.appId, redirectURI, state), nil
 }
 
