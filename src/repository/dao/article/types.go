@@ -7,7 +7,7 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, art Article) error
 }
 
-type PublishedArticleV1 struct {
+type PublishedArticle struct {
 	Id       int64  `gorm:"primaryKey,autoIncrement" bson:"id,omitempty"`
 	Title    string `gorm:"type=varchar(4096)" bson:"title,omitempty"`
 	AuthorId int64  `gorm:"index" bson:"author_id,omitempty"`
