@@ -8,6 +8,7 @@ require (
 	github.com/alibabacloud-go/dysmsapi-20170525/v4 v4.1.3
 	github.com/alibabacloud-go/tea v1.3.9
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/cloopen/go-sms-sdk v0.0.0-20200702015230-7c5619f80c9e
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -92,6 +93,7 @@ require (
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.9 // indirect

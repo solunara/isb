@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -15,10 +14,10 @@ import (
 	"github.com/solunara/isb/src/types/jwtoken"
 )
 
-const (
-	// biz
-	biz_login = "user_login"
-)
+const biz_login = "user_login"
+
+// 确保 UserHandler 实现了 handler 接口
+var _ handler = &UserHandler{}
 
 type UserHandler struct {
 	emailRexExp    *regexp.Regexp
@@ -34,7 +33,6 @@ func NewUserHandler(usersvc service.UserService, codeSvc service.CaptchaService)
 		// 密码格式校验
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 	)
-	fmt.Println("=======")
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
@@ -44,11 +42,11 @@ func NewUserHandler(usersvc service.UserService, codeSvc service.CaptchaService)
 }
 
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
-	// ---------------- vbook api ---------------------
 	ug := server.Group("/user")
 	ug.POST("/signup", h.SignUp)
-	ug.POST("/login/email", h.LoginWithEmail)
+	ug.POST("/logout", h.Logout)
 
+	ug.POST("/login/email", h.LoginWithEmail)
 	ug.POST("/login/sms/send", h.LoginSMSSend)
 	ug.POST("/login/sms", h.LoginSMS)
 
@@ -109,6 +107,19 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	default:
 		ctx.JSON(http.StatusOK, app.ErrInternalServer)
 	}
+}
+
+func (u *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	// 我可以随便设置值了
+	// 你要放在 session 里面的值
+	sess.Options(sessions.Options{
+		//Secure: true,
+		//HttpOnly: true,
+		MaxAge: -1,
+	})
+	sess.Save()
+	ctx.String(http.StatusOK, "退出登录成功")
 }
 
 func (h *UserHandler) LoginWithEmail(ctx *gin.Context) {
