@@ -111,8 +111,6 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 
 func (u *UserHandler) Logout(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
-	// 我可以随便设置值了
-	// 你要放在 session 里面的值
 	sess.Options(sessions.Options{
 		//Secure: true,
 		//HttpOnly: true,
