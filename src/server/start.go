@@ -49,6 +49,9 @@ func Start() {
 
 	InitRouters(ginServer, dbCli, redisCli)
 
+	// 开启 prometheus 监控
+	InitPrometheus()
+
 	if err := ginServer.Run(fmt.Sprintf(":%v", viper.GetInt("http.port"))); err != nil {
 		log.Fatal(err)
 	}

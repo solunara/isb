@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	sessionsredis "github.com/gin-contrib/sessions/redis"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/solunara/isb/src/config"
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/model/hllmodel"
@@ -140,6 +142,13 @@ func InitRedis() (redis.Cmdable, error) {
 		DB:       viper.GetInt("redis.db"),
 	})
 	return redisCli, redisCli.Ping(context.Background()).Err()
+}
+
+func InitPrometheus() {
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(fmt.Sprintf(":%d", viper.GetInt("http.prometheus_port")), nil)
+	}()
 }
 
 func InitMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger.Logger) []gin.HandlerFunc {

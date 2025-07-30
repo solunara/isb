@@ -3,6 +3,7 @@ app:
 
 http:
   port: 8080
+  prometheus_port: 8081
   write_timeout: 30 # Second unit
   read_timeout: 30 # Second unit
 
