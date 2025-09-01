@@ -18,6 +18,7 @@ import (
 	"github.com/solunara/isb/src/model"
 	"github.com/solunara/isb/src/model/hllmodel"
 	"github.com/solunara/isb/src/model/xytmodel"
+	"github.com/solunara/isb/src/pkg/metric"
 	"github.com/solunara/isb/src/pkg/ratelimit"
 	"github.com/solunara/isb/src/repository"
 	"github.com/solunara/isb/src/repository/cache"
@@ -163,6 +164,12 @@ func InitMiddlewares(redisCmd redis.Cmdable, store sessionsredis.Store, l logger
 	return []gin.HandlerFunc{
 		corsHdl(),
 		bd.Build(),
+		(&metric.MiddlewareBuilder{
+			Namespace: "solunara_isb",
+			Subsystem: "vbook",
+			Name:      "gin_http",
+			Help:      "统计gin的http接口",
+		}).Build(),
 		sessions.Sessions("mysession", store),
 		middleware.NewLoginJWTMiddlewareBuilder().
 			IgnorePaths("/user/signup").

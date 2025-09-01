@@ -39,7 +39,7 @@ services:
       - ALLOW_NONE_AUTHENTICATION=yes
     ports:
       - "12379:2379"
-    # kafka
+  # kafka
   kafka:
     image: bitname/kafka:3.6.0
     environment:
@@ -56,3 +56,15 @@ services:
     ports:
       - "9092:9092"
       - "9094:9094"
+  # peometheus
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+  # grafana
+  grafana:
+    image: grafana/grafana-enterprise:10.2.0
+    ports:
+      - 3000:3000
