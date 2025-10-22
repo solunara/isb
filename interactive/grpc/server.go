@@ -4,7 +4,11 @@ import (
 	"context"
 
 	intrv1 "github.com/solunara/isb/api/proto/gen/intr/v1"
+	"github.com/solunara/isb/interactive/domain"
 	"github.com/solunara/isb/interactive/service"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type InteractiveServiceServer struct {
@@ -13,34 +17,65 @@ type InteractiveServiceServer struct {
 	svc service.InteractiveService
 }
 
+func NewInteractiveServiceServer(svc service.InteractiveService) *InteractiveServiceServer {
+	return &InteractiveServiceServer{svc: svc}
+}
+
+func (i *InteractiveServiceServer) Register(server *grpc.Server) {
+	intrv1.RegisterInteractiveServiceServer(server, i)
+}
+
 // CancelLike implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) CancelLike(context.Context, *intrv1.CancelLikeRequest) (*intrv1.CancelLikeResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) CancelLike(ctx context.Context, request *intrv1.CancelLikeRequest) (*intrv1.CancelLikeResponse, error) {
+	if request.Uid <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "uid 错误")
+	}
+	err := i.svc.CancelLike(ctx, request.GetBiz(), request.GetBizId(), request.GetUid())
+	return &intrv1.CancelLikeResponse{}, err
 }
 
 // Collect implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) Collect(context.Context, *intrv1.CollectRequest) (*intrv1.CollectResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) Collect(ctx context.Context, request *intrv1.CollectRequest) (*intrv1.CollectResponse, error) {
+	err := i.svc.Collect(ctx, request.GetBiz(), request.GetBizId(), request.GetUid(), request.GetCid())
+	return &intrv1.CollectResponse{}, err
 }
 
 // Get implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) Get(context.Context, *intrv1.GetRequest) (*intrv1.GetResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) Get(ctx context.Context, request *intrv1.GetRequest) (*intrv1.GetResponse, error) {
+	res, err := i.svc.Get(ctx, request.GetBiz(), request.GetBizId(), request.GetUid())
+	if err != nil {
+		return nil, err
+	}
+	return &intrv1.GetResponse{
+		Intr: i.toDTO(res),
+	}, nil
 }
 
 // GetByIds implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) GetByIds(context.Context, *intrv1.GetByIdsRequest) (*intrv1.GetByIdsResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) GetByIds(ctx context.Context, request *intrv1.GetByIdsRequest) (*intrv1.GetByIdsResponse, error) {
+	res, err := i.svc.GetByIds(ctx, request.GetBiz(), request.GetIds())
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int64]*intrv1.Interactive, len(res))
+	for k, v := range res {
+		m[k] = i.toDTO(v)
+	}
+	return &intrv1.GetByIdsResponse{
+		Intrs: m,
+	}, nil
 }
 
 // IncrReadCnt implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) IncrReadCnt(context.Context, *intrv1.IncrReadCntRequest) (*intrv1.IncrReadCntResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) IncrReadCnt(ctx context.Context, request *intrv1.IncrReadCntRequest) (*intrv1.IncrReadCntResponse, error) {
+	err := i.svc.IncrReadCnt(ctx, request.GetBiz(), request.GetBizId())
+	return &intrv1.IncrReadCntResponse{}, err
 }
 
 // Like implements intrv1.InteractiveServiceServer.
-func (i *InteractiveServiceServer) Like(context.Context, *intrv1.LikeRequest) (*intrv1.LikeResponse, error) {
-	panic("unimplemented")
+func (i *InteractiveServiceServer) Like(ctx context.Context, request *intrv1.LikeRequest) (*intrv1.LikeResponse, error) {
+	err := i.svc.Like(ctx, request.GetBiz(), request.GetBizId(), request.GetUid())
+	return &intrv1.LikeResponse{}, err
 }
 
 // mustEmbedUnimplementedInteractiveServiceServer implements intrv1.InteractiveServiceServer.
@@ -49,3 +84,16 @@ func (i *InteractiveServiceServer) mustEmbedUnimplementedInteractiveServiceServe
 }
 
 var _ intrv1.InteractiveServiceServer = (*InteractiveServiceServer)(nil)
+
+// DTO data transfer object
+func (i *InteractiveServiceServer) toDTO(intr domain.Interactive) *intrv1.Interactive {
+	return &intrv1.Interactive{
+		Biz:        intr.Biz,
+		BizId:      intr.BizId,
+		CollectCnt: intr.CollectCnt,
+		Collected:  intr.Collected,
+		LikeCnt:    intr.LikeCnt,
+		Liked:      intr.Liked,
+		ReadCnt:    intr.ReadCnt,
+	}
+}
