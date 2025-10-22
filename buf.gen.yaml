@@ -1,0 +1,18 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: "github.com/solunara/isb/api/proto/gen"
+plugins:
+  # buf配置，默认用最新版本，指定版本：buf.build/protocolbuffers/go:v1.28.1
+  - plugin: buf.build/protocolbuffers/go
+    # 输出目录
+    out: api/proto/gen
+    # 输出目录相对于源码目录
+    opt: paths=source_relative
+  # grpc配置
+  - plugin: buf.build/grpc/go
+    # 输出目录
+    out: api/proto/gen
+    # 相对于源码目录
+    opt: paths=source_relative
