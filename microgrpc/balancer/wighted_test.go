@@ -1,4 +1,5 @@
-package microgrpc
+// 平滑加权轮询算法
+package balancer
 
 import (
 	"fmt"
