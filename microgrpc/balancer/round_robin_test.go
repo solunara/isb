@@ -8,17 +8,11 @@ import (
 
 	"github.com/solunara/isb/microgrpc"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	etcdv3 "go.etcd.io/etcd/client/v3"
+
 	"go.etcd.io/etcd/client/v3/naming/resolver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-type BalancerTestSuite struct {
-	suite.Suite
-	cli *etcdv3.Client
-}
 
 func (s *BalancerTestSuite) TestRRClient() {
 	t := s.T()

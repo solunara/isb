@@ -1,34 +1,37 @@
-// grpc中使用加权轮询作为负载均衡算法
-// grpc自己主动计算每个节点的权重，它会根据没个节点的QPS，错误比率来计算一个权重
-// 利用EDF算法选择一个节点，简单来说，QPS越高，权重越大，错误比率越高，权重越低
 package balancer
 
 import (
 	"context"
-
 	"time"
 
 	"github.com/solunara/isb/microgrpc"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/etcd/client/v3/naming/resolver"
 	"google.golang.org/grpc"
-	_ "google.golang.org/grpc/balancer/weightedroundrobin"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func (s *BalancerTestSuite) TestWRRClient() {
+func (s *BalancerTestSuite) TestFailoverClient() {
 	t := s.T()
 	etcdResolver, err := resolver.NewBuilder(s.cli)
 	require.NoError(s.T(), err)
-	cc, err := grpc.NewClient("etcd:///service/user",
+	cc, err := grpc.Dial("etcd:///service/user",
 		grpc.WithResolvers(etcdResolver),
 		grpc.WithDefaultServiceConfig(`
 {
-    "loadBalancingConfig": [
-        {
-            "weighted_round_robin": {}
-        }
-    ]
+  "loadBalancingConfig": [{"round_robin": {}}],
+  "methodConfig":  [
+    {
+      "name": [{"service":  "UserService"}],
+      "retryPolicy": {
+        "maxAttempts": 4,
+        "initialBackoff": "0.01s",
+        "maxBackoff": "0.1s",
+        "backoffMultiplier": 2.0,
+        "retryableStatusCodes": ["UNAVAILABLE"]
+      }
+    }
+  ]
 }
 `),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
