@@ -1,4 +1,4 @@
-// grpc中使用轮询作为负载均衡算法
+// grpc中使用加权轮询作为负载均衡算法
 package balancer
 
 import (
@@ -8,19 +8,13 @@ import (
 
 	"github.com/solunara/isb/microgrpc"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	etcdv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/naming/resolver"
 	"google.golang.org/grpc"
+	_ "google.golang.org/grpc/balancer/weightedroundrobin"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type BalancerTestSuite struct {
-	suite.Suite
-	cli *etcdv3.Client
-}
-
-func (s *BalancerTestSuite) TestRRClient() {
+func (s *BalancerTestSuite) TestWRRClient() {
 	t := s.T()
 	etcdResolver, err := resolver.NewBuilder(s.cli)
 	require.NoError(s.T(), err)
@@ -30,7 +24,7 @@ func (s *BalancerTestSuite) TestRRClient() {
 {
     "loadBalancingConfig": [
         {
-            "round_robin": {}
+            "weighted_round_robin": {}
         }
     ]
 }
