@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var interceptor_first grpc.UnaryServerInterceptor = func(
+var interceptor_server_first grpc.UnaryServerInterceptor = func(
 	ctx context.Context,
 	req any,
 	info *grpc.UnaryServerInfo,
@@ -21,7 +21,7 @@ var interceptor_first grpc.UnaryServerInterceptor = func(
 	return
 }
 
-var interceptor_second grpc.UnaryServerInterceptor = func(
+var interceptor_server_second grpc.UnaryServerInterceptor = func(
 	ctx context.Context,
 	req any,
 	info *grpc.UnaryServerInfo,
@@ -34,7 +34,7 @@ var interceptor_second grpc.UnaryServerInterceptor = func(
 
 func TestServer(t *testing.T) {
 	server := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(interceptor_first, interceptor_second),
+		grpc.ChainUnaryInterceptor(interceptor_server_first, interceptor_server_second),
 	)
 	// 优雅退出
 	defer func() {
