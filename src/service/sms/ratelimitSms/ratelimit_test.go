@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/solunara/isb/src/pkg/ratelimit"
-	limitermock "github.com/solunara/isb/src/pkg/ratelimit/mocks"
+	"github.com/solunara/isb/pkg/ratelimit"
+	limitermock "github.com/solunara/isb/pkg/ratelimit/mocks"
 	"github.com/solunara/isb/src/service/sms"
 	smsmock "github.com/solunara/isb/src/service/sms/mocks"
 	"github.com/stretchr/testify/assert"

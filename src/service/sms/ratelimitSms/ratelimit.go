@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/solunara/isb/src/pkg/ratelimit"
+	"github.com/solunara/isb/pkg/ratelimit"
 	"github.com/solunara/isb/src/service/sms"
 )
 

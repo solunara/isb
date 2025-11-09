@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/solunara/isb/src/pkg/ratelimit"
+	"github.com/solunara/isb/pkg/ratelimit"
 )
 
 type Builder struct {
